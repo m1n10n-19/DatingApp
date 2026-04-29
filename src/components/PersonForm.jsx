@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, User, ChevronDown } from 'lucide-react';
+import { getActionButtonClasses } from '../utils/styles';
 
 export default function PersonForm({ label, personNumber, questions, onComplete, onBack }) {
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState(-1); // -1 = name/gender step
-  const [answers, setAnswers] = useState(['', '', '']);
+  const [answers, setAnswers] = useState(() => questions.map(() => ''));
   const [genderOpen, setGenderOpen] = useState(false);
 
   const genderOptions = [
@@ -38,7 +39,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
   const progress = ((currentQuestion + 2) / (questions.length + 1)) * 100;
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-8">
+    <div className="min-h-screen flex flex-col px-6 pt-8 pb-16">
       {/* Header */}
       <div className="max-w-2xl mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
@@ -58,7 +59,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-1 bg-surface rounded-full overflow-hidden mb-12">
+        <div className="w-full h-1 bg-surface rounded-full overflow-hidden mb-8">
           <motion.div
             className="h-full bg-gradient-to-r from-accent to-rose rounded-full"
             initial={{ width: 0 }}
@@ -69,8 +70,8 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="max-w-2xl mx-auto w-full">
+      <div className="flex-1 max-w-2xl mx-auto w-full pt-4">
+        <div className="w-full">
           <AnimatePresence mode="wait">
             {currentQuestion === -1 ? (
               <motion.div
@@ -147,11 +148,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                   whileTap={{ scale: canProceedFromIntro ? 0.98 : 1 }}
                   onClick={() => canProceedFromIntro && setCurrentQuestion(0)}
                   disabled={!canProceedFromIntro}
-                  className={`mt-10 inline-flex items-center gap-3 px-8 py-4 rounded-full text-base font-medium transition-all duration-300 cursor-pointer ${
-                    canProceedFromIntro
-                      ? 'bg-gradient-to-r from-accent/20 to-rose/20 border border-accent/30 text-text hover:border-accent/50'
-                      : 'bg-surface border border-surface-light text-text-faint cursor-not-allowed'
-                  }`}
+                  className={`mt-10 ${getActionButtonClasses(canProceedFromIntro)}`}
                 >
                   Continue to questions
                   <ArrowRight className="w-4 h-4" />
@@ -180,7 +177,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                     setAnswers(newAnswers);
                   }}
                   placeholder={questions[currentQuestion].placeholder}
-                  rows={6}
+                  rows={4}
                   className="w-full bg-surface/60 border border-surface-light rounded-xl px-5 py-4 text-text placeholder:text-text-faint focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all resize-none leading-relaxed"
                   autoFocus
                 />
@@ -198,11 +195,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                   whileTap={{ scale: canProceedFromQuestion ? 0.98 : 1 }}
                   onClick={() => canProceedFromQuestion && handleNext()}
                   disabled={!canProceedFromQuestion}
-                  className={`mt-8 inline-flex items-center gap-3 px-8 py-4 rounded-full text-base font-medium transition-all duration-300 cursor-pointer ${
-                    canProceedFromQuestion
-                      ? 'bg-gradient-to-r from-accent/20 to-rose/20 border border-accent/30 text-text hover:border-accent/50'
-                      : 'bg-surface border border-surface-light text-text-faint cursor-not-allowed'
-                  }`}
+                  className={`mt-8 ${getActionButtonClasses(canProceedFromQuestion)}`}
                 >
                   {currentQuestion === questions.length - 1 ? 'Complete' : 'Next question'}
                   <ArrowRight className="w-4 h-4" />
