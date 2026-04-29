@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, User, ChevronDown } from 'lucide-react';
 import { getActionButtonClasses } from '../utils/styles';
@@ -9,6 +9,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
   const [currentQuestion, setCurrentQuestion] = useState(-1); // -1 = name/gender step
   const [answers, setAnswers] = useState(() => questions.map(() => ''));
   const [genderOpen, setGenderOpen] = useState(false);
+  const nextButtonRef = useRef(null);
 
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -19,6 +20,13 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
 
   const canProceedFromIntro = name.trim().length > 0 && gender.length > 0;
   const canProceedFromQuestion = currentQuestion >= 0 && answers[currentQuestion]?.trim().length > 20;
+
+  // Scroll the Next/Complete button into view when the answer becomes valid
+  useEffect(() => {
+    if (canProceedFromQuestion && nextButtonRef.current?.scrollIntoView) {
+      nextButtonRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [canProceedFromQuestion]);
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
@@ -70,7 +78,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
       </div>
 
       {/* Content */}
-      <div className="flex-1 max-w-2xl mx-auto w-full pt-4">
+      <div className="max-w-2xl mx-auto w-full pt-4">
         <div className="w-full">
           <AnimatePresence mode="wait">
             {currentQuestion === -1 ? (
@@ -100,7 +108,6 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                       onChange={(e) => setName(e.target.value)}
                       placeholder="What should we call you?"
                       className="w-full bg-surface/60 border border-surface-light rounded-xl px-5 py-4 text-text placeholder:text-text-faint focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
-                      autoFocus
                     />
                   </div>
 
@@ -121,7 +128,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute top-full left-0 right-0 mt-2 bg-surface border border-surface-light rounded-xl overflow-hidden z-20 shadow-xl"
+                          className="absolute bottom-full left-0 right-0 mb-2 bg-surface border border-surface-light rounded-xl overflow-hidden z-20 shadow-xl"
                         >
                           {genderOptions.map((option) => (
                             <button
@@ -165,7 +172,7 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                 <p className="text-sm text-accent mb-2 font-medium tracking-wide uppercase">
                   Question {currentQuestion + 1} of {questions.length}
                 </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-8 text-text leading-snug">
+                <h2 className="font-serif text-xl md:text-2xl font-semibold mb-4 text-text leading-snug">
                   {questions[currentQuestion].text}
                 </h2>
 
@@ -177,9 +184,8 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                     setAnswers(newAnswers);
                   }}
                   placeholder={questions[currentQuestion].placeholder}
-                  rows={4}
+                  rows={3}
                   className="w-full bg-surface/60 border border-surface-light rounded-xl px-5 py-4 text-text placeholder:text-text-faint focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all resize-none leading-relaxed"
-                  autoFocus
                 />
 
                 <div className="flex items-center justify-between mt-4">
@@ -190,16 +196,18 @@ export default function PersonForm({ label, personNumber, questions, onComplete,
                   </p>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: canProceedFromQuestion ? 1.02 : 1 }}
-                  whileTap={{ scale: canProceedFromQuestion ? 0.98 : 1 }}
-                  onClick={() => canProceedFromQuestion && handleNext()}
-                  disabled={!canProceedFromQuestion}
-                  className={`mt-8 ${getActionButtonClasses(canProceedFromQuestion)}`}
-                >
-                  {currentQuestion === questions.length - 1 ? 'Complete' : 'Next question'}
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
+                <div ref={nextButtonRef}>
+                  <motion.button
+                    whileHover={{ scale: canProceedFromQuestion ? 1.02 : 1 }}
+                    whileTap={{ scale: canProceedFromQuestion ? 0.98 : 1 }}
+                    onClick={() => canProceedFromQuestion && handleNext()}
+                    disabled={!canProceedFromQuestion}
+                    className={`mt-8 ${getActionButtonClasses(canProceedFromQuestion)}`}
+                  >
+                    {currentQuestion === questions.length - 1 ? 'Complete' : 'Next question'}
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
