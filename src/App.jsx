@@ -1,46 +1,65 @@
 import { useState } from 'react';
 import Landing from './components/Landing';
-import PersonForm from './components/PersonForm';
+import Questionnaire from './components/Questionnaire';
+import TruthPreamble from './components/TruthPreamble';
+import ProfileLibrary from './components/ProfileLibrary';
+import RelationshipStatus from './components/RelationshipStatus';
 import Analyzing from './components/Analyzing';
 import Results from './components/Results';
 import ModelSelector from './components/ModelSelector';
 import Settings from './components/Settings';
-import { QUESTIONS, createInitialPerson } from './services/questions';
+import { createInitialPerson } from './services/questions';
 import { SAMPLE_PERSON_A, SAMPLE_PERSON_B } from './services/sampleData';
+import { saveProfile } from './services/profileStore';
 
-const STEPS = {
+export const VIEWS = {
   LANDING: 'landing',
-  SETTINGS: 'settings',
-  PERSON_A: 'personA',
-  PERSON_B: 'personB',
+  LIBRARY: 'library',
+  TRUTH: 'truth',
+  QUESTIONNAIRE: 'questionnaire',
+  RELATIONSHIP_STATUS: 'relationship_status',
   ANALYZING: 'analyzing',
   RESULTS: 'results',
+  SETTINGS: 'settings',
 };
 
 export default function App() {
-  const [step, setStep] = useState(STEPS.LANDING);
-  const [personA, setPersonA] = useState(createInitialPerson);
-  const [personB, setPersonB] = useState(createInitialPerson);
-  const [results, setResults] = useState(null);
+  const [view, setView] = useState(VIEWS.LANDING);
+  const [questionnaireMode, setQuestionnaireMode] = useState(null); // 'fresh' | 'library_create' | null
+  const [freshFlowStage, setFreshFlowStage] = useState(null); // 'A' | 'B' | null
+  const [personA, setPersonA] = useState(null);
+  const [personB, setPersonB] = useState(null);
+  const [activeProfile, setActiveProfile] = useState(null);
+  const [relationshipStatus, setRelationshipStatus] = useState('new_match');
+  const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
   const [provider, setProvider] = useState('groq');
   const [model, setModel] = useState('llama-3.3-70b-versatile');
 
-  const handleStart = () => setStep(STEPS.PERSON_A);
+  // --- Handlers ---
 
-  const handleQuickTest = async () => {
-    setPersonA(SAMPLE_PERSON_A);
-    setPersonB(SAMPLE_PERSON_B);
-    setStep(STEPS.ANALYZING);
+  const handleStartFresh = () => {
+    setQuestionnaireMode('fresh');
+    setFreshFlowStage('A');
+    setActiveProfile(createInitialPerson());
+    setPersonA(null);
+    setPersonB(null);
+    setView(VIEWS.TRUTH);
+  };
+
+  const runAnalyze = async (pA, pB, status) => {
+    setRelationshipStatus(status);
     setError(null);
+    setView(VIEWS.ANALYZING);
 
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          personA: SAMPLE_PERSON_A,
-          personB: SAMPLE_PERSON_B,
+          personA: pA,
+          personB: pB,
+          relationshipStatus: status,
           provider,
           model,
         }),
@@ -58,14 +77,100 @@ export default function App() {
       }
 
       const result = await response.json();
-      setResults(result);
-      setStep(STEPS.RESULTS);
+      setAnalysisData({
+        personA: result.personA,
+        personB: result.personB,
+        compatibility: result.compatibility,
+        repair: null,
+        simulation: null,
+      });
+      setView(VIEWS.RESULTS);
     } catch (err) {
       console.error('Analysis error:', err);
       const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
-      setError(isNetworkError ? 'Unable to connect to the server. Please ensure the backend is running.' : err.message);
-      setStep(STEPS.RESULTS);
+      setError(
+        isNetworkError
+          ? 'Unable to connect to the server. Please ensure the backend is running.'
+          : err.message
+      );
+      setView(VIEWS.RESULTS);
     }
+  };
+
+  const handleTrySample = () => {
+    setPersonA(SAMPLE_PERSON_A);
+    setPersonB(SAMPLE_PERSON_B);
+    setQuestionnaireMode(null);
+    setFreshFlowStage(null);
+    runAnalyze(SAMPLE_PERSON_A, SAMPLE_PERSON_B, 'new_match');
+  };
+
+  const handleOpenLibrary = () => {
+    setView(VIEWS.LIBRARY);
+  };
+
+  const handleLibraryCreateNew = () => {
+    setQuestionnaireMode('library_create');
+    setFreshFlowStage(null);
+    setActiveProfile(createInitialPerson());
+    setView(VIEWS.TRUTH);
+  };
+
+  const handleLibraryPair = ({ personA: pA, personB: pB }) => {
+    setPersonA(pA);
+    setPersonB(pB);
+    setQuestionnaireMode(null);
+    setView(VIEWS.RELATIONSHIP_STATUS);
+  };
+
+  const handleTruthAccept = () => {
+    setView(VIEWS.QUESTIONNAIRE);
+  };
+
+  const handleTruthBack = () => {
+    if (questionnaireMode === 'library_create') {
+      setView(VIEWS.LIBRARY);
+    } else {
+      setView(VIEWS.LANDING);
+    }
+  };
+
+  const handleQuestionnaireComplete = (person) => {
+    if (questionnaireMode === 'library_create') {
+      saveProfile(person);
+      setActiveProfile(null);
+      setQuestionnaireMode(null);
+      setView(VIEWS.LIBRARY);
+    } else if (questionnaireMode === 'fresh') {
+      if (freshFlowStage === 'A') {
+        setPersonA(person);
+        setFreshFlowStage('B');
+        setActiveProfile(createInitialPerson());
+        setView(VIEWS.QUESTIONNAIRE); // Skip truth preamble for B
+      } else if (freshFlowStage === 'B') {
+        setPersonB(person);
+        setFreshFlowStage(null);
+        setQuestionnaireMode(null);
+        setActiveProfile(null);
+        setView(VIEWS.RELATIONSHIP_STATUS);
+      }
+    }
+  };
+
+  const handleConfirmStatus = (status) => {
+    runAnalyze(personA, personB, status);
+  };
+
+  const handleReset = () => {
+    setView(VIEWS.LANDING);
+    setPersonA(null);
+    setPersonB(null);
+    setActiveProfile(null);
+    setQuestionnaireMode(null);
+    setFreshFlowStage(null);
+    setRelationshipStatus('new_match');
+    setAnalysisData(null);
+    setError(null);
   };
 
   const handleModelChange = (newProvider, newModel) => {
@@ -73,56 +178,17 @@ export default function App() {
     setModel(newModel);
   };
 
-  const handlePersonAComplete = (data) => {
-    setPersonA(data);
-    setStep(STEPS.PERSON_B);
-  };
+  // Show model selector on all views except analyzing and settings
+  const showModelSelector = view !== VIEWS.ANALYZING && view !== VIEWS.SETTINGS;
 
-  const handlePersonBComplete = async (data) => {
-    setPersonB(data);
-    setStep(STEPS.ANALYZING);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ personA, personB: data, provider, model }),
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'Analysis failed. Please try again.';
-        try {
-          const errData = await response.json();
-          errorMessage = errData.details || errData.error || errorMessage;
-        } catch {
-          // Response body wasn't valid JSON — use generic message
-        }
-        throw new Error(errorMessage);
+  // Build results in legacy shape for Results component (Task 4 will update Results)
+  const legacyResults = analysisData
+    ? {
+        personA: analysisData.personA,
+        personB: analysisData.personB,
+        compatibility: analysisData.compatibility,
       }
-
-      const result = await response.json();
-      setResults(result);
-      setStep(STEPS.RESULTS);
-    } catch (err) {
-      console.error('Analysis error:', err);
-      // Show user-friendly message for network/connection errors
-      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
-      setError(isNetworkError ? 'Unable to connect to the server. Please ensure the backend is running.' : err.message);
-      setStep(STEPS.RESULTS);
-    }
-  };
-
-  const handleReset = () => {
-    setStep(STEPS.LANDING);
-    setPersonA(createInitialPerson());
-    setPersonB(createInitialPerson());
-    setResults(null);
-    setError(null);
-  };
-
-  // Show model selector on all steps except analyzing and settings
-  const showModelSelector = step !== STEPS.ANALYZING && step !== STEPS.SETTINGS;
+    : null;
 
   return (
     <div className="min-h-screen">
@@ -134,7 +200,7 @@ export default function App() {
             onChange={handleModelChange}
           />
           <button
-            onClick={() => setStep(STEPS.SETTINGS)}
+            onClick={() => setView(VIEWS.SETTINGS)}
             className="p-2 rounded-full bg-surface/60 border border-surface-light/50 text-text-dim hover:text-text hover:border-surface-light transition-all cursor-pointer"
             title="API Key Settings"
           >
@@ -142,33 +208,58 @@ export default function App() {
           </button>
         </div>
       )}
-      {step === STEPS.LANDING && <Landing onStart={handleStart} onQuickTest={handleQuickTest} />}
-      {step === STEPS.SETTINGS && <Settings onBack={() => setStep(STEPS.LANDING)} />}
-      {step === STEPS.PERSON_A && (
-        <PersonForm
-          label="Person A"
-          personNumber={1}
-          questions={QUESTIONS}
-          onComplete={handlePersonAComplete}
-          onBack={() => setStep(STEPS.LANDING)}
+
+      {view === VIEWS.LANDING && (
+        <Landing
+          onStart={handleStartFresh}
+          onQuickTest={handleTrySample}
+          onOpenLibrary={handleOpenLibrary}
         />
       )}
-      {step === STEPS.PERSON_B && (
-        <PersonForm
-          label="Person B"
-          personNumber={2}
-          questions={QUESTIONS}
-          onComplete={handlePersonBComplete}
-          onBack={() => setStep(STEPS.PERSON_A)}
+
+      {view === VIEWS.SETTINGS && <Settings onBack={() => setView(VIEWS.LANDING)} />}
+
+      {view === VIEWS.LIBRARY && (
+        <ProfileLibrary
+          onCreateNew={handleLibraryCreateNew}
+          onPairSelected={handleLibraryPair}
+          onBack={() => setView(VIEWS.LANDING)}
         />
       )}
-      {step === STEPS.ANALYZING && <Analyzing personA={personA} personB={personB} />}
-      {step === STEPS.RESULTS && (
-        <Results
-          results={results}
-          error={error}
+
+      {view === VIEWS.TRUTH && (
+        <TruthPreamble
+          onAccept={handleTruthAccept}
+          onCancel={handleTruthBack}
+        />
+      )}
+
+      {view === VIEWS.QUESTIONNAIRE && (
+        <Questionnaire
+          personLabel={freshFlowStage ? `Person ${freshFlowStage}` : 'Profile'}
+          initialPerson={activeProfile}
+          onComplete={handleQuestionnaireComplete}
+          onCancel={() => setView(VIEWS.TRUTH)}
+        />
+      )}
+
+      {view === VIEWS.RELATIONSHIP_STATUS && (
+        <RelationshipStatus
           personA={personA}
           personB={personB}
+          onConfirm={handleConfirmStatus}
+          onBack={() => setView(VIEWS.LANDING)}
+        />
+      )}
+
+      {view === VIEWS.ANALYZING && <Analyzing personA={personA || {}} personB={personB || {}} />}
+
+      {view === VIEWS.RESULTS && (
+        <Results
+          results={legacyResults}
+          error={error}
+          personA={personA || {}}
+          personB={personB || {}}
           onReset={handleReset}
         />
       )}

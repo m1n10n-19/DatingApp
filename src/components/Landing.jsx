@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, Zap } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap, Users } from 'lucide-react';
 
-export default function Landing({ onStart, onQuickTest }) {
+export default function Landing({ onStart, onQuickTest, onOpenLibrary }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
       {/* Background orbs */}
@@ -72,6 +72,19 @@ export default function Landing({ onStart, onQuickTest }) {
         >
           <Zap className="w-4 h-4 text-warm" />
           Quick Test
+        </motion.button>
+
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.1, duration: 0.6 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onOpenLibrary}
+          className="group inline-flex items-center gap-2 ml-3 px-6 py-4 bg-surface/40 border border-surface-light/50 rounded-full text-base text-text-dim hover:text-text hover:border-surface-light transition-all duration-300 cursor-pointer"
+        >
+          <Users className="w-4 h-4 text-accent" />
+          My Profiles
         </motion.button>
 
         <motion.p
