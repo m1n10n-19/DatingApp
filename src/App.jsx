@@ -5,6 +5,7 @@ import Analyzing from './components/Analyzing';
 import Results from './components/Results';
 import ModelSelector from './components/ModelSelector';
 import { QUESTIONS, createInitialPerson } from './services/questions';
+import { SAMPLE_PERSON_A, SAMPLE_PERSON_B } from './services/sampleData';
 
 const STEPS = {
   LANDING: 'landing',
@@ -24,6 +25,46 @@ export default function App() {
   const [model, setModel] = useState('llama-3.3-70b-versatile');
 
   const handleStart = () => setStep(STEPS.PERSON_A);
+
+  const handleQuickTest = async () => {
+    setPersonA(SAMPLE_PERSON_A);
+    setPersonB(SAMPLE_PERSON_B);
+    setStep(STEPS.ANALYZING);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personA: SAMPLE_PERSON_A,
+          personB: SAMPLE_PERSON_B,
+          provider,
+          model,
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Analysis failed. Please try again.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.details || errData.error || errorMessage;
+        } catch {
+          // Response body wasn't valid JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      setResults(result);
+      setStep(STEPS.RESULTS);
+    } catch (err) {
+      console.error('Analysis error:', err);
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      setError(isNetworkError ? 'Unable to connect to the server. Please ensure the backend is running.' : err.message);
+      setStep(STEPS.RESULTS);
+    }
+  };
 
   const handleModelChange = (newProvider, newModel) => {
     setProvider(newProvider);
@@ -92,7 +133,7 @@ export default function App() {
           />
         </div>
       )}
-      {step === STEPS.LANDING && <Landing onStart={handleStart} />}
+      {step === STEPS.LANDING && <Landing onStart={handleStart} onQuickTest={handleQuickTest} />}
       {step === STEPS.PERSON_A && (
         <PersonForm
           label="Person A"
