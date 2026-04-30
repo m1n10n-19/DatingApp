@@ -1,1 +1,12 @@
-export { QUESTIONS, INITIAL_PERSON, createInitialPerson } from '../../shared/questions.js';
+export {
+  QUESTIONS,
+  CORE_QUESTIONS,
+  KOKOLOGY_QUESTIONS,
+  SHADOW_QUESTIONS,
+  DESIRE_QUESTIONS,
+  CONTRADICTION_PAIRS,
+  MODULE_DEFS,
+  TRUTH_PREAMBLE,
+  INITIAL_PERSON,
+  createInitialPerson,
+} from '../../shared/questions.js';
