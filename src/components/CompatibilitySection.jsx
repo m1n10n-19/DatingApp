@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Zap, Flame, Copy, XCircle, TrendingUp, TrendingDown, AlertTriangle, Quote } from 'lucide-react';
+import { Zap, Flame, Copy, XCircle, TrendingUp, TrendingDown, AlertTriangle, Quote, Shield, Wrench } from 'lucide-react';
 
 const verdictConfig = {
   COMPLEMENT: {
@@ -112,6 +112,17 @@ export default function CompatibilitySection({ compatibility }) {
         <p className="text-text leading-relaxed">{compatibility.dynamic}</p>
       </Section>
 
+      {/* Shadow Collision (NEW — between dynamic and breakingPoint) */}
+      {compatibility.shadowCollision && (
+        <Section
+          title="Shadow Collision"
+          icon={<Shield className="w-4 h-4 text-rose" />}
+          delay={0.25}
+        >
+          <p className="text-text leading-relaxed">{compatibility.shadowCollision}</p>
+        </Section>
+      )}
+
       {/* Breaking Point */}
       <Section
         title="Breaking Point"
@@ -159,6 +170,17 @@ export default function CompatibilitySection({ compatibility }) {
               </div>
             ))}
           </div>
+        </Section>
+      )}
+
+      {/* Repair Lever (NEW — between earlyWarnings and closingLine) */}
+      {compatibility.repairLever && (
+        <Section
+          title="Repair Lever"
+          icon={<Wrench className="w-4 h-4 text-sage" />}
+          delay={0.65}
+        >
+          <p className="text-text leading-relaxed">{compatibility.repairLever}</p>
         </Section>
       )}
 

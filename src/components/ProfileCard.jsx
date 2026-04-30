@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
-import { Fingerprint, Brain, Eye, Heart, AlertCircle } from 'lucide-react';
+import { Fingerprint, Brain, Eye, Heart, AlertCircle, Sprout, BookOpen } from 'lucide-react';
 
 const sectionConfig = [
   { key: 'archetype', label: 'Archetype', icon: Fingerprint, isTitle: true },
   { key: 'coreWiring', label: 'Core Wiring', icon: Brain },
   { key: 'shadowPattern', label: 'Shadow Pattern', icon: Eye },
-  { key: 'complementProfile', label: 'Complement Profile', icon: Heart },
+  { key: 'loveTemplate', label: 'Love Template', icon: Heart },
+  { key: 'complementProfile', label: 'Complement Profile', icon: BookOpen },
   { key: 'likelyMistake', label: 'Likely Mistake', icon: AlertCircle },
+  { key: 'growthEdge', label: 'Growth Edge', icon: Sprout },
 ];
 
 export default function ProfileCard({ profile, color }) {

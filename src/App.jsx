@@ -35,6 +35,10 @@ export default function App() {
   const [error, setError] = useState(null);
   const [provider, setProvider] = useState('groq');
   const [model, setModel] = useState('llama-3.3-70b-versatile');
+  const [repairLoading, setRepairLoading] = useState(false);
+  const [repairError, setRepairError] = useState(null);
+  const [simulateLoading, setSimulateLoading] = useState(false);
+  const [simulateError, setSimulateError] = useState(null);
 
   // --- Handlers ---
 
@@ -161,6 +165,92 @@ export default function App() {
     runAnalyze(personA, personB, status);
   };
 
+  const handleRequestRepair = async () => {
+    setRepairLoading(true);
+    setRepairError(null);
+    try {
+      const response = await fetch('/api/repair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personA: personA,
+          personB: personB,
+          compatibility: analysisData.compatibility,
+          relationshipStatus,
+          provider,
+          model,
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Repair generation failed. Please try again.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.details || errData.error || errorMessage;
+        } catch {
+          // Response body wasn't valid JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setAnalysisData((prev) => ({ ...prev, repair: data.repair }));
+    } catch (err) {
+      console.error('Repair error:', err);
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      setRepairError(
+        isNetworkError
+          ? 'Unable to connect to the server. Please ensure the backend is running.'
+          : err.message
+      );
+    } finally {
+      setRepairLoading(false);
+    }
+  };
+
+  const handleRequestSimulate = async () => {
+    setSimulateLoading(true);
+    setSimulateError(null);
+    try {
+      const response = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personA: personA,
+          personB: personB,
+          compatibility: analysisData.compatibility,
+          relationshipStatus,
+          provider,
+          model,
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Simulation failed. Please try again.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.details || errData.error || errorMessage;
+        } catch {
+          // Response body wasn't valid JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setAnalysisData((prev) => ({ ...prev, simulation: data.simulation }));
+    } catch (err) {
+      console.error('Simulate error:', err);
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      setSimulateError(
+        isNetworkError
+          ? 'Unable to connect to the server. Please ensure the backend is running.'
+          : err.message
+      );
+    } finally {
+      setSimulateLoading(false);
+    }
+  };
+
   const handleReset = () => {
     setView(VIEWS.LANDING);
     setPersonA(null);
@@ -171,6 +261,10 @@ export default function App() {
     setRelationshipStatus('new_match');
     setAnalysisData(null);
     setError(null);
+    setRepairLoading(false);
+    setRepairError(null);
+    setSimulateLoading(false);
+    setSimulateError(null);
   };
 
   const handleModelChange = (newProvider, newModel) => {
@@ -181,12 +275,14 @@ export default function App() {
   // Show model selector on all views except analyzing and settings
   const showModelSelector = view !== VIEWS.ANALYZING && view !== VIEWS.SETTINGS;
 
-  // Build results in legacy shape for Results component (Task 4 will update Results)
-  const legacyResults = analysisData
+  // Build results shape for Results component
+  const resultsData = analysisData
     ? {
         personA: analysisData.personA,
         personB: analysisData.personB,
         compatibility: analysisData.compatibility,
+        repair: analysisData.repair,
+        simulation: analysisData.simulation,
       }
     : null;
 
@@ -256,11 +352,17 @@ export default function App() {
 
       {view === VIEWS.RESULTS && (
         <Results
-          results={legacyResults}
+          results={resultsData}
           error={error}
           personA={personA || {}}
           personB={personB || {}}
           onReset={handleReset}
+          repairLoading={repairLoading}
+          repairError={repairError}
+          simulateLoading={simulateLoading}
+          simulateError={simulateError}
+          onRequestRepair={handleRequestRepair}
+          onRequestSimulate={handleRequestSimulate}
         />
       )}
     </div>

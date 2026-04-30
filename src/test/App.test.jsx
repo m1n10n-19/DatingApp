@@ -197,4 +197,198 @@ describe('App', () => {
       expect(screen.getByText('Start New Analysis')).toBeInTheDocument();
     });
   });
+
+  it('handleRequestRepair sets loading, calls fetch, populates analysisData.repair on success', async () => {
+    const mockRepairResult = {
+      repair: {
+        realBreak: 'The real break',
+        emotionalCalibration: { personA: 'Cal A', personB: 'Cal B' },
+        dailyPractice: 'Daily',
+        cognitiveRepair: 'Cognitive',
+        revisionPractice: 'Revision',
+        equanimityPractice: 'Equanimity',
+        shadowWork: 'Shadow',
+        communicationRepair: 'Communication',
+      },
+    };
+
+    global.fetch = vi.fn((url) => {
+      if (url === '/api/models') {
+        return Promise.resolve(modelsResponse);
+      }
+      if (url === '/api/analyze') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              personA: { archetype: 'Arch A' },
+              personB: { archetype: 'Arch B' },
+              compatibility: { verdict: 'COMPLEMENT', score: 80, earlyWarnings: [] },
+            }),
+        });
+      }
+      if (url === '/api/repair') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockRepairResult),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    // Quick Test to get to results
+    await act(async () => {
+      fireEvent.click(screen.getByText('Quick Test'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Start New Analysis')).toBeInTheDocument();
+    });
+
+    // Navigate to Repair tab
+    await act(async () => {
+      fireEvent.click(screen.getByText('Repair'));
+    });
+
+    // Click Generate Repair Plan
+    await act(async () => {
+      fireEvent.click(screen.getByText('Generate Repair Plan'));
+    });
+
+    // Verify /api/repair was called
+    const repairCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/repair');
+    expect(repairCalls.length).toBe(1);
+    const repairBody = JSON.parse(repairCalls[0][1].body);
+    expect(repairBody.compatibility).toBeDefined();
+
+    // Repair data should now be rendered
+    await waitFor(() => {
+      expect(screen.getByText('The real break')).toBeInTheDocument();
+    });
+  });
+
+  it('handleRequestRepair sets repairError on fetch failure', async () => {
+    global.fetch = vi.fn((url) => {
+      if (url === '/api/models') {
+        return Promise.resolve(modelsResponse);
+      }
+      if (url === '/api/analyze') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              personA: { archetype: 'Arch A' },
+              personB: { archetype: 'Arch B' },
+              compatibility: { verdict: 'COMPLEMENT', score: 80, earlyWarnings: [] },
+            }),
+        });
+      }
+      if (url === '/api/repair') {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Repair failed on server' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Quick Test'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Start New Analysis')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Repair'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Generate Repair Plan'));
+    });
+
+    // Should display the error
+    await waitFor(() => {
+      expect(screen.getByText('Failed to generate repair guidance.')).toBeInTheDocument();
+      expect(screen.getByText('Repair failed on server')).toBeInTheDocument();
+    });
+  });
+
+  it('handleRequestSimulate calls /api/simulate and populates simulation data', async () => {
+    const mockSimResult = {
+      simulation: {
+        year1: 'Year 1 projection',
+        year3: 'Year 3 projection',
+        year5: 'Year 5 projection',
+        year7: 'Year 7 projection',
+        year10: { bestCase: 'Best 10', worstCase: 'Worst 10' },
+        oneIntervention: 'Do this one thing',
+      },
+    };
+
+    global.fetch = vi.fn((url) => {
+      if (url === '/api/models') {
+        return Promise.resolve(modelsResponse);
+      }
+      if (url === '/api/analyze') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              personA: { archetype: 'Arch A' },
+              personB: { archetype: 'Arch B' },
+              compatibility: { verdict: 'COMPLEMENT', score: 80, earlyWarnings: [] },
+            }),
+        });
+      }
+      if (url === '/api/simulate') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockSimResult),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Quick Test'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Start New Analysis')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Simulate'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Project Future'));
+    });
+
+    // Verify /api/simulate was called
+    const simCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/simulate');
+    expect(simCalls.length).toBe(1);
+
+    // Simulation data should now be rendered
+    await waitFor(() => {
+      expect(screen.getByText('Year 1 projection')).toBeInTheDocument();
+      expect(screen.getByText('Best 10')).toBeInTheDocument();
+      expect(screen.getByText('Worst 10')).toBeInTheDocument();
+      expect(screen.getByText('Do this one thing')).toBeInTheDocument();
+    });
+  });
 });
