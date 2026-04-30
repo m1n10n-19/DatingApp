@@ -2,13 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Users, ArrowRight } from 'lucide-react';
 import ProfilePreviewCard from './ProfilePreviewCard';
-import { listProfiles, deleteProfile } from '../services/profileStore';
-import { getActionButtonClasses } from '../utils/styles';
+import { listProfiles, deleteProfile, getFictionalProfiles } from '../services/profileStore';
+import { getActionButtonClasses, getTabButtonClasses } from '../utils/styles';
+
+const TAB_MY = 'my';
+const TAB_FICTIONAL = 'fictional';
 
 export default function ProfileLibrary({ onCreateNew, onPairSelected, onBack }) {
   const [profiles, setProfiles] = useState(() => listProfiles());
+  const [activeTab, setActiveTab] = useState(TAB_MY);
   const [selectedA, setSelectedA] = useState(null);
   const [selectedB, setSelectedB] = useState(null);
+
+  const fictionalProfiles = getFictionalProfiles();
 
   const refreshProfiles = useCallback(() => {
     setProfiles(listProfiles());
@@ -41,6 +47,8 @@ export default function ProfileLibrary({ onCreateNew, onPairSelected, onBack }) 
   };
 
   const canContinue = selectedA && selectedB && selectedA.id !== selectedB.id;
+  const displayedProfiles = activeTab === TAB_MY ? profiles : fictionalProfiles;
+  const hasAnyProfiles = profiles.length > 0 || fictionalProfiles.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col px-6 pt-8 pb-16">
@@ -56,8 +64,28 @@ export default function ProfileLibrary({ onCreateNew, onPairSelected, onBack }) 
           </button>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-accent" />
-            <h1 className="text-xl font-serif font-bold text-text">My Profiles</h1>
+            <h1 className="text-xl font-serif font-bold text-text">Profile Library</h1>
           </div>
+        </div>
+
+        {/* Tab toggle */}
+        <div className="flex gap-2 mb-6" role="tablist">
+          <button
+            role="tab"
+            aria-selected={activeTab === TAB_MY}
+            onClick={() => setActiveTab(TAB_MY)}
+            className={getTabButtonClasses(activeTab === TAB_MY)}
+          >
+            My Profiles
+          </button>
+          <button
+            role="tab"
+            aria-selected={activeTab === TAB_FICTIONAL}
+            onClick={() => setActiveTab(TAB_FICTIONAL)}
+            className={getTabButtonClasses(activeTab === TAB_FICTIONAL)}
+          >
+            Historical &amp; Fictional
+          </button>
         </div>
 
         {/* Selection slots */}
@@ -85,39 +113,50 @@ export default function ProfileLibrary({ onCreateNew, onPairSelected, onBack }) 
           </div>
         </div>
 
-        {/* Create new button */}
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          onClick={onCreateNew}
-          className="w-full mb-6 inline-flex items-center justify-center gap-2 px-6 py-3 bg-surface/40 border border-surface-light/50 rounded-xl text-base text-text-dim hover:text-text hover:border-surface-light transition-all duration-300 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          Create new profile
-        </motion.button>
+        {/* Create new button (only on My Profiles tab) */}
+        {activeTab === TAB_MY && (
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={onCreateNew}
+            className="w-full mb-6 inline-flex items-center justify-center gap-2 px-6 py-3 bg-surface/40 border border-surface-light/50 rounded-xl text-base text-text-dim hover:text-text hover:border-surface-light transition-all duration-300 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Create new profile
+          </motion.button>
+        )}
 
         {/* Profile list */}
-        {profiles.length === 0 ? (
+        {displayedProfiles.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-text-dim mb-2">No saved profiles yet.</p>
-            <p className="text-sm text-text-faint">Create one to get started.</p>
+            {activeTab === TAB_MY ? (
+              <>
+                <p className="text-text-dim mb-2">No saved profiles yet.</p>
+                <p className="text-sm text-text-faint">Create one to get started.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-text-dim mb-2">No fictional profiles available.</p>
+                <p className="text-sm text-text-faint">Run the generator script to populate them.</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {profiles.map((profile) => (
+            {displayedProfiles.map((profile) => (
               <ProfilePreviewCard
                 key={profile.id}
                 profile={profile}
                 selected={selectedA?.id === profile.id || selectedB?.id === profile.id}
                 onSelect={handleSelect}
-                onDelete={handleDelete}
+                onDelete={activeTab === TAB_MY ? handleDelete : undefined}
               />
             ))}
           </div>
         )}
 
         {/* Continue button */}
-        {profiles.length > 0 && (
+        {hasAnyProfiles && (
           <div className="mt-8">
             <motion.button
               whileHover={{ scale: canContinue ? 1.02 : 1 }}

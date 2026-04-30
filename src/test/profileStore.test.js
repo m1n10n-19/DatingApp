@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { listProfiles, getProfile, saveProfile, deleteProfile, STORAGE_KEY } from '../services/profileStore';
+import { listProfiles, getProfile, saveProfile, deleteProfile, getFictionalProfiles, STORAGE_KEY } from '../services/profileStore';
 
 function createMockLocalStorage() {
   const store = new Map();
@@ -56,6 +56,11 @@ describe('profileStore', () => {
     expect(deleteProfile('test-1')).toBe(true);
     expect(listProfiles()).toHaveLength(0);
     expect(deleteProfile('test-1')).toBe(false);
+  });
+
+  it('getFictionalProfiles returns an array', () => {
+    const result = getFictionalProfiles();
+    expect(Array.isArray(result)).toBe(true);
   });
 
   it('corruption recovery: invalid JSON returns [] and logs warning', () => {

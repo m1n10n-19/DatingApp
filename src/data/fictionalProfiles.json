@@ -1,0 +1,96 @@
+[
+  {
+    "id": "fictional-marcus-aurelius",
+    "name": "Marcus Aurelius",
+    "gender": "male",
+    "answers": [
+      "I see a vast, still lake reflecting the grey sky. I sit by the edge, observing the ripples caused by the wind, reminding myself that the water's nature is to be disturbed, but my mind's nature is to remain calm.",
+      "Inside the box are old journals filled with my private thoughts and struggles. I feel a sense of duty when I open it, recognizing the continuous effort required to live virtuously. On a free evening, I would read philosophy and write reflections to prepare my mind for the challenges of tomorrow.",
+      "I felt completely loved when my mentor Rusticus corrected my character with gentle firmness. We were walking in the gardens, and his words were sharp but delivered with profound care for my soul. My body felt a deep, grounding stillness, a recognition that true love demands virtue.",
+      "I started a campaign in Germania that I could not finish before winter forced a retreat. I stayed with my philosophical practice long after the exhaustion of ruling an empire made it difficult. The first week after the retreat, I wrote extensively about the impermanence of victory and the necessity of accepting fate.",
+      "I am irritated by those who complain about the nature of the world, specifically a senator who constantly whines about the weather and his health. It irritates me because it reflects my own internal temptation to complain about the heavy burden of the purple.",
+      "I last cried when I received news of the plague devastating the legions. I was alone in my tent. Immediately after, I washed my face, put on my armor, and went out to address the commanders, knowing that my grief must not become their despair."
+    ],
+    "hasRelationshipHistory": true,
+    "schemaVersion": 2,
+    "createdAt": "2026-04-30T18:00:00.000Z",
+    "fictional": true,
+    "era": "Ancient Rome",
+    "type": "Historical",
+    "brief": "Stoic philosopher and Roman Emperor.",
+    "analysis": {
+      "archetype": "The Burdened Sentinel",
+      "coreWiring": "Driven by an overwhelming sense of duty and the pursuit of virtue. Drained by the emotional demands of others and the chaos of the world. Needs a space where he is allowed to simply exist without managing a crisis.",
+      "shadowPattern": "Emotional suppression disguised as philosophical detachment. He intellectualizes his feelings to avoid experiencing them, which can leave partners feeling managed rather than loved.",
+      "loveTemplate": "Feels loved through shared discipline and mutual commitment to growth. His body responds to grounding presence and intellectual challenge, not emotional effusiveness.",
+      "coreFear": {
+        "primary": "Loss of control over his own mind and reactions.",
+        "secondary": "Failing in his duty to others.",
+        "interaction": "He fears that if he fails in his duty, he will lose control of his mind, leading to a rigid adherence to routine that suffocates spontaneity."
+      },
+      "complementProfile": "Someone who embodies emotional fluidity without chaos. A partner who can draw him out of his head and into his body, teaching him that feeling is not a failure of philosophy.",
+      "likelyMistake": "Choosing someone who relies entirely on his stability, turning the relationship into another duty to manage rather than a partnership to enjoy.",
+      "growthEdge": "Learning to distinguish between stoic acceptance and emotional avoidance. Allowing himself to be seen in moments of genuine helplessness.",
+      "redFlags": {
+        "inThemselves": [
+          "Retreating into books or work when a partner is upset.",
+          "Offering philosophical advice instead of emotional comfort.",
+          "Viewing the relationship as a project to be managed."
+        ],
+        "inOthers": [
+          "Constant complaining without action.",
+          "Demanding emotional displays as proof of love.",
+          "Lack of personal discipline or purpose."
+        ]
+      },
+      "closingLine": "He offers a fortress of stability, but you will have to teach him how to leave the watchtower."
+    }
+  },
+  {
+    "id": "fictional-cleopatra",
+    "name": "Cleopatra",
+    "gender": "female",
+    "answers": [
+      "I see the Nile at flood stage, rich with silt and power. I step into the shallows, feeling the current pull at my ankles, knowing that this water brings both life and destruction, and I must learn to navigate both.",
+      "Inside the box are the political treaties and secret correspondence of my youth. I feel a surge of ambition and a twinge of regret for the innocence lost. On a free evening, I would study the stars and plan my next strategic alliance, for a queen is never truly free.",
+      "I felt completely loved when Antony looked at me not as a queen, but as a woman, during a quiet moment on the royal barge. He touched my face with a reverence that had nothing to do with Egypt. My body felt a sudden, terrifying vulnerability, a softening of the armor I wear every day.",
+      "I started a diplomatic negotiation with Octavian that I abandoned when I realized his ambition outstripped his honor. I stayed with my vision for an independent Egypt long after Rome demanded submission. The first week after the negotiation failed, I doubled the guard, refused to sleep, and began preparing the fleet for war.",
+      "I am irritated by men who mistake brute force for power, specifically a Roman general who thought he could intimidate me with his legions. It irritates me because it reflects my own fear that my intellect will ultimately be crushed by someone else's violence.",
+      "I want a relationship where I do not have to be the smartest person in the room, where I can surrender control without fearing that my empire—or my heart—will be conquered."
+    ],
+    "hasRelationshipHistory": true,
+    "schemaVersion": 2,
+    "createdAt": "2026-04-30T18:00:00.000Z",
+    "fictional": true,
+    "era": "Ancient Egypt",
+    "type": "Historical",
+    "brief": "The last active ruler of the Ptolemaic Kingdom of Egypt.",
+    "analysis": {
+      "archetype": "The Strategic Sovereign",
+      "coreWiring": "Driven by the need to secure her legacy and protect her people. Drained by incompetence and the constant need to perform strength. Needs a partner who is an equal, not a subject or a conqueror.",
+      "shadowPattern": "Using seduction and intellect as weapons of control. She struggles to trust anyone's motives, constantly analyzing interactions for hidden agendas, which prevents true intimacy.",
+      "loveTemplate": "Feels loved when she is seen beyond her titles and power. Her body responds to reverence and vulnerability, a stark contrast to her daily performance of invincibility.",
+      "coreFear": {
+        "primary": "Being overpowered and losing her autonomy.",
+        "secondary": "Being loved only for what she represents, not who she is.",
+        "interaction": "She fears losing autonomy so much that she tests partners to see if they love her for herself, often pushing them away in the process."
+      },
+      "complementProfile": "A partner with quiet, unshakeable confidence who does not need to compete with her brilliance. Someone who offers a safe harbor where she can take off the crown.",
+      "likelyMistake": "Choosing ambitious, powerful men who ultimately view her as a prize to be won or a threat to be neutralized.",
+      "growthEdge": "Learning to trust without a contingency plan. Allowing a relationship to exist without it serving a strategic purpose.",
+      "redFlags": {
+        "inThemselves": [
+          "Testing a partner's loyalty through manipulation.",
+          "Viewing vulnerability as a tactical disadvantage.",
+          "Prioritizing the optics of the relationship over the reality."
+        ],
+        "inOthers": [
+          "A need to dominate or control the narrative.",
+          "Inability to handle her intellect or power.",
+          "Viewing her as an extension of their own ambition."
+        ]
+      },
+      "closingLine": "She will build an empire with you, provided you never try to sit on her throne."
+    }
+  }
+]

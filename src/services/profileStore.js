@@ -1,3 +1,5 @@
+import fictionalProfiles from '../data/fictionalProfiles.json';
+
 const STORAGE_KEY = 'complement.profiles.v1';
 
 /**
@@ -80,6 +82,14 @@ export function clearAll() {
   } catch (e) {
     console.warn('profileStore: failed to clear storage', e);
   }
+}
+
+/**
+ * Return the array of pre-generated fictional / historical profiles.
+ * @returns {import('../../shared/schema.js').Profile[]}
+ */
+export function getFictionalProfiles() {
+  return fictionalProfiles;
 }
 
 export { STORAGE_KEY };
