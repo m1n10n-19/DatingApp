@@ -2,21 +2,20 @@ import { THEORETICAL_FOUNDATION } from './foundation.js';
 
 const ANALYZE_SCHEMA_INSTRUCTION = `
 ═══════════════════════════════════════
-ANALYSIS TASK
+MODULE 1: DISCOVER
 ═══════════════════════════════════════
 
-Analyze the two people provided. For each person, produce a ProfileOutput. Then produce a Compatibility assessment of the pair.
+Analyze each person individually. Produce a ProfileOutput for each.
 
-Never take answers at face value. Every answer has three layers:
-1. STATED — what they said
-2. PERFORMED — what they want you to think
-3. REVEALED — what the answer actually shows despite intention
+For each person, read across all their answers to build a unified psychological portrait. Don't treat questions independently — look for the patterns that connect them. What someone says about loss reveals what they value. What they hide reveals what they need. What they describe as understanding reveals what they've been denied.
 
-Always read Layer 3. That's where the real architecture lives.
+═══════════════════════════════════════
+MODULE 2: MATCH
+═══════════════════════════════════════
 
-GENDER-AWARE READING:
-- Men understate emotional reality. When a man says "I just move on" — look for the emotional reality underneath. Competence as emotional avoidance, humor as deflection, "I'm fine" masking shutdown or rage.
-- Women over-articulate emotional reality but understate behavioral patterns. When a woman says "I spiral and reflect" — look for whether awareness changes behavior or just narrative. Performed self-awareness masking the actually unflattering truth.
+Analyze the pair together. Produce a Compatibility assessment.
+
+Look at how their patterns interlock. Where one person's shadow meets the other's wound. Where one person's strength enables the other's avoidance. Where their attachment styles create a specific dance — not a generic one. Name the actual texture of what it feels like to be in this relationship on a Tuesday evening.
 
 ═══════════════════════════════════════
 OUTPUT FORMAT
@@ -32,7 +31,8 @@ Respond ONLY in this exact JSON structure. No preamble. No backticks. No markdow
     "loveTemplate": "How they learned to give and receive love, and the template they unconsciously repeat. 2-3 sentences.",
     "complementProfile": "The specific personality architecture that completes them. 2-3 sentences.",
     "likelyMistake": "The specific wrong person they repeatedly choose and why. 2-3 sentences.",
-    "growthEdge": "The one internal shift that would most transform their relationship pattern. 1-2 sentences."
+    "growthEdge": "The one internal shift that would most transform their relationship pattern. 1-2 sentences.",
+    "closingLine": "One sentence that captures this person's entire relationship architecture."
   },
   "personB": {
     "archetype": "",
@@ -41,7 +41,8 @@ Respond ONLY in this exact JSON structure. No preamble. No backticks. No markdow
     "loveTemplate": "",
     "complementProfile": "",
     "likelyMistake": "",
-    "growthEdge": ""
+    "growthEdge": "",
+    "closingLine": ""
   },
   "compatibility": {
     "verdict": "COMPLEMENT | COMBUSTION | MIRROR | MISFIRE",
@@ -59,8 +60,6 @@ Respond ONLY in this exact JSON structure. No preamble. No backticks. No markdow
 
 VERDICT must be exactly one of: COMPLEMENT, COMBUSTION, MIRROR, MISFIRE.
 SCORE must be 0-100. Be honest. Do not inflate for comfort.
-earlyWarnings must be exactly 3 strings — specific behaviors to watch for in the first three months.
-
-THE NORTH STAR: Rare people have rare matches. The tragedy isn't that their match doesn't exist — it's that they pass each other without recognition. Every analysis you produce is a recognition engine.`;
+earlyWarnings must be exactly 3 strings — specific behaviors to watch for in the first three months.`;
 
 export const ANALYZE_PROMPT = THEORETICAL_FOUNDATION + '\n\n' + ANALYZE_SCHEMA_INSTRUCTION;

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
-import { CORE_QUESTIONS, KOKOLOGY_QUESTIONS, SHADOW_QUESTIONS, DESIRE_QUESTIONS, CONTRADICTION_PAIRS } from '../shared/questions.js';
+import { getQuestionsForGender, MIN_ANSWERS, MAX_ANSWERS } from '../shared/questions.js';
 import { ANALYZE_PROMPT } from './prompts/analyze.js';
 import { REPAIR_PROMPT } from './prompts/repair.js';
 import { SIMULATE_PROMPT } from './prompts/simulate.js';
@@ -194,11 +194,7 @@ app.post('/api/keys', (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Module answer count requirements ---
-const MODULE_COUNTS = { core: 3, kokology: 4, shadow: 3, desire: 2, contradictions: 6 };
-const OPTIONAL_MODULES = ['kokology', 'shadow', 'desire', 'contradictions'];
-
-// --- Input validation ---
+// --- Input validation (v2: flat answers array) ---
 function validatePerson(person, label) {
   if (!person || typeof person !== 'object') {
     return `${label} data is required.`;
@@ -210,43 +206,16 @@ function validatePerson(person, label) {
     return `${label} must have a gender.`;
   }
 
-  // moduleAnswers validation
-  if (!person.moduleAnswers || typeof person.moduleAnswers !== 'object') {
-    return `${label} must have moduleAnswers.`;
+  // answers validation: flat array of 5 or 6 non-empty strings
+  if (!Array.isArray(person.answers)) {
+    return `${label} must have an answers array.`;
   }
-
-  // core answers required: array of 3 non-empty strings
-  const core = person.moduleAnswers.core;
-  if (!Array.isArray(core) || core.length !== MODULE_COUNTS.core) {
-    return `${label} must have exactly ${MODULE_COUNTS.core} core answers.`;
+  if (person.answers.length < MIN_ANSWERS || person.answers.length > MAX_ANSWERS) {
+    return `${label} must have ${MIN_ANSWERS} or ${MAX_ANSWERS} answers.`;
   }
-  for (let i = 0; i < core.length; i++) {
-    if (typeof core[i] !== 'string' || core[i].trim().length === 0) {
-      return `${label} core answer ${i + 1} must be a non-empty string.`;
-    }
-  }
-
-  // enabledModules validation
-  if (!Array.isArray(person.enabledModules)) {
-    return `${label} must have enabledModules array.`;
-  }
-  for (const m of person.enabledModules) {
-    if (typeof m !== 'string' || !OPTIONAL_MODULES.includes(m)) {
-      return `${label} has invalid enabled module: ${m}.`;
-    }
-  }
-
-  // Per-module answer count validation
-  for (const m of person.enabledModules) {
-    const expectedCount = MODULE_COUNTS[m];
-    const answers = person.moduleAnswers[m];
-    if (!Array.isArray(answers) || answers.length !== expectedCount) {
-      return `${label} must have exactly ${expectedCount} ${m} answers.`;
-    }
-    for (let i = 0; i < answers.length; i++) {
-      if (typeof answers[i] !== 'string' || answers[i].trim().length === 0) {
-        return `${label} ${m} answer ${i + 1} must be a non-empty string.`;
-      }
+  for (let i = 0; i < person.answers.length; i++) {
+    if (typeof person.answers[i] !== 'string' || person.answers[i].trim().length === 0) {
+      return `${label} answer ${i + 1} must be a non-empty string.`;
     }
   }
 
@@ -265,11 +234,17 @@ function validateRelationshipStatus(status) {
 }
 
 // --- Output validation / normalization ---
-const PROFILE_FIELDS = ['archetype', 'coreWiring', 'shadowPattern', 'loveTemplate', 'complementProfile', 'likelyMistake', 'growthEdge'];
+const PROFILE_FIELDS = ['archetype', 'coreWiring', 'shadowPattern', 'loveTemplate', 'complementProfile', 'likelyMistake', 'growthEdge', 'closingLine'];
 const COMPAT_STRING_FIELDS = ['verdict', 'dynamic', 'breakingPoint', 'bestCase', 'worstCase', 'shadowCollision', 'repairLever', 'closingLine'];
 const VALID_VERDICTS = ['COMPLEMENT', 'COMBUSTION', 'MIRROR', 'MISFIRE'];
 
-const REPAIR_FIELDS = ['realBreak', 'dailyPractice', 'cognitiveRepair', 'revisionPractice', 'equanimityPractice', 'shadowWork', 'communicationRepair'];
+const REPAIR_STRING_FIELDS = [
+  'realBreak', 'breakType', 'primaryMethod', 'whyThisMethod',
+  'practiceInstructions', 'measurableIndicators', 'timeframe',
+  'secondaryMethod', 'secondaryPractice', 'warningSign',
+  'repairIsImpossibleIf', 'closingLine',
+];
+const VALID_BREAK_TYPES = ['ATTACHMENT', 'COMMUNICATION', 'SHADOW', 'TRUST', 'VALUES', 'DESIRE'];
 
 function normalizeResult(raw, kind) {
   if (kind === 'repair') {
@@ -322,16 +297,14 @@ function normalizeRepair(raw) {
   const src = raw.repair || raw || {};
   const repair = {};
 
-  for (const field of REPAIR_FIELDS) {
+  for (const field of REPAIR_STRING_FIELDS) {
     repair[field] = typeof src[field] === 'string' ? src[field] : '';
   }
 
-  // emotionalCalibration
-  const ec = src.emotionalCalibration || {};
-  repair.emotionalCalibration = {
-    personA: typeof ec.personA === 'string' ? ec.personA : '',
-    personB: typeof ec.personB === 'string' ? ec.personB : '',
-  };
+  // Validate breakType
+  if (!VALID_BREAK_TYPES.includes(repair.breakType)) {
+    repair.breakType = 'SHADOW';
+  }
 
   return { repair };
 }
@@ -340,8 +313,13 @@ function normalizeSimulation(raw) {
   const src = raw.simulation || raw || {};
   const simulation = {};
 
-  for (const field of ['year1', 'year3', 'year5', 'year7', 'oneIntervention']) {
-    simulation[field] = typeof src[field] === 'string' ? src[field] : '';
+  // year1, year3, year5, year7: each must be { examined, unexamined }
+  for (const yearKey of ['year1', 'year3', 'year5', 'year7']) {
+    const yearSrc = src[yearKey] || {};
+    simulation[yearKey] = {
+      examined: typeof yearSrc.examined === 'string' ? yearSrc.examined : '',
+      unexamined: typeof yearSrc.unexamined === 'string' ? yearSrc.unexamined : '',
+    };
   }
 
   // year10 must be { bestCase, worstCase }
@@ -350,6 +328,17 @@ function normalizeSimulation(raw) {
     bestCase: typeof y10.bestCase === 'string' ? y10.bestCase : '',
     worstCase: typeof y10.worstCase === 'string' ? y10.worstCase : '',
   };
+
+  // oneIntervention must be { when, what, why }
+  const oi = src.oneIntervention || {};
+  simulation.oneIntervention = {
+    when: typeof oi.when === 'string' ? oi.when : '',
+    what: typeof oi.what === 'string' ? oi.what : '',
+    why: typeof oi.why === 'string' ? oi.why : '',
+  };
+
+  // closingLine
+  simulation.closingLine = typeof src.closingLine === 'string' ? src.closingLine : '';
 
   return { simulation };
 }
@@ -397,50 +386,22 @@ async function runLLM({ systemPrompt, userPayload, provider: providerId = 'groq'
   return parsed;
 }
 
-// --- Module question lookup for payload building ---
-const MODULE_QUESTIONS = {
-  kokology: KOKOLOGY_QUESTIONS,
-  shadow: SHADOW_QUESTIONS,
-  desire: DESIRE_QUESTIONS,
-};
-
-function getModuleQuestionTexts(mod) {
-  if (mod === 'contradictions') {
-    return [
-      ...CONTRADICTION_PAIRS.map((p) => p.first.text),
-      ...CONTRADICTION_PAIRS.map((p) => p.second.text),
-    ];
-  }
-  return (MODULE_QUESTIONS[mod] || []).map((q) => q.text);
-}
-
-// --- Build user payload for analyze ---
+// --- Build user payload for analyze (v2: flat answers) ---
 function buildUserPayload(personA, personB, relationshipStatus) {
   function personSection(person, label) {
     const sections = [];
     sections.push(`${label} (${person.name}, ${person.gender}):`);
 
-    // Core questions
-    sections.push('\nCORE QUESTIONS:');
-    for (let i = 0; i < CORE_QUESTIONS.length; i++) {
-      sections.push(`Question ${i + 1}: ${CORE_QUESTIONS[i].text}`);
-      sections.push(`Answer: ${person.moduleAnswers.core[i]}`);
-    }
+    const questions = getQuestionsForGender(person.gender);
+    const answers = person.answers || [];
 
-    // Optional module answers (include question text for each)
-    if (person.enabledModules && person.enabledModules.length > 0) {
-      for (const mod of person.enabledModules) {
-        const answers = person.moduleAnswers[mod];
-        if (answers) {
-          const questionTexts = getModuleQuestionTexts(mod);
-          sections.push(`\n${mod.toUpperCase()} QUESTIONS:`);
-          for (let i = 0; i < answers.length; i++) {
-            const qText = questionTexts[i] || `${mod} Q${i + 1}`;
-            sections.push(`Question: ${qText}`);
-            sections.push(`Answer: ${answers[i]}`);
-          }
-        }
-      }
+    for (let i = 0; i < answers.length; i++) {
+      const q = questions[i];
+      const layerLabel = q ? `${q.label}` : `Question ${i + 1}`;
+      const qText = q ? q.text : `Question ${i + 1}`;
+      sections.push(`\n${layerLabel}:`);
+      sections.push(`Question: ${qText}`);
+      sections.push(`Answer: ${answers[i]}`);
     }
 
     return sections.join('\n');
@@ -522,8 +483,8 @@ async function handlePairEndpoint(req, res, { prompt, kind, errorLabel }) {
     if (compatError) return res.status(400).json({ error: compatError });
 
     const userPayload = JSON.stringify({
-      personA: { name: personA.name, gender: personA.gender, moduleAnswers: personA.moduleAnswers, enabledModules: personA.enabledModules },
-      personB: { name: personB.name, gender: personB.gender, moduleAnswers: personB.moduleAnswers, enabledModules: personB.enabledModules },
+      personA: { name: personA.name, gender: personA.gender, answers: personA.answers },
+      personB: { name: personB.name, gender: personB.gender, answers: personB.answers },
       relationshipStatus,
       compatibility,
     });

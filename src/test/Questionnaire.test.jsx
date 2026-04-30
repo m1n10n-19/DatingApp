@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Questionnaire from '../components/Questionnaire';
-import { createInitialPerson } from '../services/questions';
+import { createInitialPerson, UNIVERSAL_QUESTIONS, getQuestionsForGender } from '../services/questions';
 
 // Mock profileStore so we can check if saveProfile is called
 vi.mock('../services/profileStore', () => ({
@@ -21,20 +21,22 @@ const makeProps = (overrides = {}) => ({
   ...overrides,
 });
 
+const LONG_ANSWER = 'This is a sufficiently long answer to pass the minimum character requirement';
+
 // Helper to fill name+gender and advance
-async function fillNameGender(name = 'Alice') {
+async function fillNameGender(name = 'Alice', genderLabel = 'Female') {
   const nameInput = screen.getByPlaceholderText('What should we call you?');
   fireEvent.change(nameInput, { target: { value: name } });
   fireEvent.click(screen.getByText('Select gender'));
-  fireEvent.click(screen.getByText('Female'));
+  fireEvent.click(screen.getByText(genderLabel));
   fireEvent.click(screen.getByText('Continue to questions'));
   await waitFor(() => {
-    expect(screen.getByText(/Core/)).toBeInTheDocument();
+    expect(screen.getByText(/Layer 1: Surface/)).toBeInTheDocument();
   });
 }
 
 // Helper to fill a question and advance
-async function answerAndNext(answer = 'This is a sufficiently long answer to pass the minimum character requirement') {
+async function answerAndNext(answer = LONG_ANSWER) {
   const textarea = screen.getByRole('textbox');
   fireEvent.change(textarea, { target: { value: answer } });
   const nextBtn = screen.queryByText('Next question') || screen.queryByText('Complete');
@@ -66,163 +68,172 @@ describe('Questionnaire', () => {
     expect(continueBtn).toBeDisabled();
   });
 
-  it('advances through core phase (3 questions)', async () => {
+  it('validates gender required before Next', () => {
+    render(<Questionnaire {...makeProps()} />);
+    const continueBtn = screen.getByText('Continue to questions');
+    expect(continueBtn).toBeDisabled();
+
+    // Fill only gender — still disabled (no name)
+    fireEvent.click(screen.getByText('Select gender'));
+    fireEvent.click(screen.getByText('Female'));
+    expect(continueBtn).toBeDisabled();
+  });
+
+  it('enables continue when both name and gender are set', () => {
+    render(<Questionnaire {...makeProps()} />);
+    const nameInput = screen.getByPlaceholderText('What should we call you?');
+    fireEvent.change(nameInput, { target: { value: 'Alice' } });
+    fireEvent.click(screen.getByText('Select gender'));
+    fireEvent.click(screen.getByText('Female'));
+    const continueBtn = screen.getByText('Continue to questions');
+    expect(continueBtn).not.toBeDisabled();
+  });
+
+  it('advances to questions phase showing layer labels', async () => {
     render(<Questionnaire {...makeProps()} />);
     await fillNameGender();
 
-    // Should show core question 1
-    expect(screen.getByText(/Core — Question 1 of 3/)).toBeInTheDocument();
-    await answerAndNext();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Core — Question 2 of 3/)).toBeInTheDocument();
-    });
-    await answerAndNext();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Core — Question 3 of 3/)).toBeInTheDocument();
-    });
+    // Should show question 1 with layer label
+    expect(screen.getByText(/Layer 1: Surface — Question 1 of 6/)).toBeInTheDocument();
+    expect(screen.getByText(UNIVERSAL_QUESTIONS[0].text)).toBeInTheDocument();
   });
 
-  it('module select toggles enabledModules', async () => {
-    render(<Questionnaire {...makeProps()} />);
-    await fillNameGender();
-
-    // Answer all 3 core questions
-    for (let i = 0; i < 3; i++) {
-      await answerAndNext();
-      if (i < 2) {
-        await waitFor(() => {
-          expect(screen.getByText(new RegExp(`Core — Question ${i + 2} of 3`))).toBeInTheDocument();
-        });
-      }
-    }
-
-    // Should be on module select
-    await waitFor(() => {
-      expect(screen.getByText('Add depth modules?')).toBeInTheDocument();
-    });
-
-    // Check Kokology checkbox
-    const kokologyCheckbox = screen.getByLabelText(/Kokology/);
-    expect(kokologyCheckbox).not.toBeChecked();
-    fireEvent.click(kokologyCheckbox);
-    expect(kokologyCheckbox).toBeChecked();
-  });
-
-  it('skips disabled modules', async () => {
+  it('iterates through all 6 questions for female gender', async () => {
     const onComplete = vi.fn();
     render(<Questionnaire {...makeProps({ onComplete })} />);
-    await fillNameGender();
+    await fillNameGender('Alice', 'Female');
 
-    // Answer all 3 core questions
-    for (let i = 0; i < 3; i++) {
-      await answerAndNext();
-      if (i < 2) {
-        await waitFor(() => {
-          expect(screen.getByText(new RegExp(`Core — Question ${i + 2} of 3`))).toBeInTheDocument();
-        });
-      }
+    const questions = getQuestionsForGender('female');
+    expect(questions).toHaveLength(6);
+
+    for (let i = 0; i < 6; i++) {
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(`${questions[i].label} — Question ${i + 1} of 6`))
+        ).toBeInTheDocument();
+      });
+      await answerAndNext(`Answer for question ${i + 1} that is definitely long enough`);
     }
 
-    // Module select - don't enable anything
-    await waitFor(() => {
-      expect(screen.getByText('Skip depth modules')).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText('Skip depth modules'));
-
-    // Should call onComplete immediately (skipping all optional modules)
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
 
     const profile = onComplete.mock.calls[0][0];
-    expect(profile.enabledModules).toEqual([]);
-    expect(profile.moduleAnswers.core).toHaveLength(3);
-    expect(profile.moduleAnswers.kokology).toBeUndefined();
+    expect(profile.answers).toHaveLength(6);
+    expect(profile.gender).toBe('female');
   });
 
-  it('collects contradictions in two halves', async () => {
+  it('iterates through all 6 questions for male gender', async () => {
     const onComplete = vi.fn();
     render(<Questionnaire {...makeProps({ onComplete })} />);
-    await fillNameGender();
+    await fillNameGender('Bob', 'Male');
 
-    // Core
-    for (let i = 0; i < 3; i++) {
-      await answerAndNext();
-      if (i < 2) {
-        await waitFor(() => {
-          expect(screen.getByText(new RegExp(`Core — Question ${i + 2} of 3`))).toBeInTheDocument();
-        });
-      }
-    }
+    const questions = getQuestionsForGender('male');
+    expect(questions).toHaveLength(6);
 
-    // Module select - enable only contradictions
-    await waitFor(() => {
-      expect(screen.getByText('Add depth modules?')).toBeInTheDocument();
-    });
-    const contradictionsCheckbox = screen.getByLabelText(/Contradiction pairs/);
-    fireEvent.click(contradictionsCheckbox);
-    fireEvent.click(screen.getByText('Continue'));
-
-    // Contradictions first half (3 questions)
-    await waitFor(() => {
-      expect(screen.getByText(/Contradictions \(part 1\) — Question 1 of 3/)).toBeInTheDocument();
-    });
-    for (let i = 0; i < 3; i++) {
-      await answerAndNext();
-      if (i < 2) {
-        await waitFor(() => {
-          expect(
-            screen.getByText(new RegExp(`Contradictions \\(part 1\\) — Question ${i + 2} of 3`))
-          ).toBeInTheDocument();
-        });
-      }
-    }
-
-    // Contradictions second half (3 questions)
-    await waitFor(() => {
-      expect(screen.getByText(/Contradictions \(part 2\) — Question 1 of 3/)).toBeInTheDocument();
-    });
-    for (let i = 0; i < 3; i++) {
-      await answerAndNext();
-      if (i < 2) {
-        await waitFor(() => {
-          expect(
-            screen.getByText(new RegExp(`Contradictions \\(part 2\\) — Question ${i + 2} of 3`))
-          ).toBeInTheDocument();
-        });
-      }
+    for (let i = 0; i < 6; i++) {
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(`${questions[i].label} — Question ${i + 1} of 6`))
+        ).toBeInTheDocument();
+      });
+      await answerAndNext(`Answer for question ${i + 1} that is definitely long enough`);
     }
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
+
     const profile = onComplete.mock.calls[0][0];
-    expect(profile.moduleAnswers.contradictions).toHaveLength(6);
-    expect(profile.enabledModules).toContain('contradictions');
+    expect(profile.answers).toHaveLength(6);
+    expect(profile.gender).toBe('male');
   });
 
-  it('calls onComplete with fully-built Profile', async () => {
+  it('shows only 5 questions for non-binary gender', async () => {
     const onComplete = vi.fn();
     render(<Questionnaire {...makeProps({ onComplete })} />);
-    await fillNameGender('Bob');
+    await fillNameGender('Sam', 'Non-binary');
 
-    // Core
-    for (let i = 0; i < 3; i++) {
-      await answerAndNext('A sufficiently long answer for question number ' + (i + 1));
-      if (i < 2) {
-        await waitFor(() => {
-          expect(screen.getByText(new RegExp(`Core — Question ${i + 2} of 3`))).toBeInTheDocument();
-        });
-      }
+    const questions = getQuestionsForGender('non-binary');
+    expect(questions).toHaveLength(5);
+
+    for (let i = 0; i < 5; i++) {
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(`${questions[i].label} — Question ${i + 1} of 5`))
+        ).toBeInTheDocument();
+      });
+      await answerAndNext(`Answer for question ${i + 1} that is definitely long enough`);
     }
 
-    // Skip modules
     await waitFor(() => {
-      expect(screen.getByText('Skip depth modules')).toBeInTheDocument();
+      expect(onComplete).toHaveBeenCalledTimes(1);
     });
-    fireEvent.click(screen.getByText('Skip depth modules'));
+
+    const profile = onComplete.mock.calls[0][0];
+    expect(profile.answers).toHaveLength(5);
+    expect(profile.gender).toBe('non-binary');
+  });
+
+  it('requires minimum 20 characters for question answers', async () => {
+    render(<Questionnaire {...makeProps()} />);
+    await fillNameGender();
+
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: 'Too short' } });
+    const nextBtn = screen.getByText('Next question');
+    expect(nextBtn).toBeDisabled();
+
+    // Show "more characters needed" message
+    expect(screen.getByText(/more characters needed/)).toBeInTheDocument();
+  });
+
+  it('shows "Ready to continue" when answer is long enough', async () => {
+    render(<Questionnaire {...makeProps()} />);
+    await fillNameGender();
+
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: LONG_ANSWER } });
+    expect(screen.getByText('Ready to continue')).toBeInTheDocument();
+  });
+
+  it('shows "Complete" on the last question button', async () => {
+    render(<Questionnaire {...makeProps()} />);
+    await fillNameGender();
+
+    const questions = getQuestionsForGender('female');
+
+    // Answer all questions except the last
+    for (let i = 0; i < questions.length - 1; i++) {
+      await answerAndNext(`Answer for question ${i + 1} that is definitely long enough`);
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(`Question ${i + 2} of ${questions.length}`))
+        ).toBeInTheDocument();
+      });
+    }
+
+    // Last question should show "Complete" button
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: LONG_ANSWER } });
+    expect(screen.getByText('Complete')).toBeInTheDocument();
+  });
+
+  it('calls onComplete with fully-built Profile (v2 schema)', async () => {
+    const onComplete = vi.fn();
+    render(<Questionnaire {...makeProps({ onComplete })} />);
+    await fillNameGender('Bob', 'Male');
+
+    const questions = getQuestionsForGender('male');
+    for (let i = 0; i < questions.length; i++) {
+      await waitFor(() => {
+        expect(
+          screen.getByText(new RegExp(`Question ${i + 1} of ${questions.length}`))
+        ).toBeInTheDocument();
+      });
+      await answerAndNext(`A sufficiently long answer for question number ${i + 1}`);
+    }
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledTimes(1);
@@ -230,11 +241,34 @@ describe('Questionnaire', () => {
 
     const profile = onComplete.mock.calls[0][0];
     expect(profile.name).toBe('Bob');
-    expect(profile.gender).toBe('female');
-    expect(profile.moduleAnswers.core).toHaveLength(3);
-    expect(profile.schemaVersion).toBe(1);
+    expect(profile.gender).toBe('male');
+    expect(profile.answers).toHaveLength(6);
+    expect(profile.schemaVersion).toBe(2);
     expect(profile.id).toBeTruthy();
     expect(profile.createdAt).toBeTruthy();
+    // Should NOT have legacy fields
+    expect(profile.moduleAnswers).toBeUndefined();
+    expect(profile.enabledModules).toBeUndefined();
+  });
+
+  it('preserves answers when navigating between questions', async () => {
+    render(<Questionnaire {...makeProps()} />);
+    await fillNameGender();
+
+    // Answer question 1
+    const textarea1 = screen.getByRole('textbox');
+    const answer1 = 'My specific answer to question one for testing';
+    fireEvent.change(textarea1, { target: { value: answer1 } });
+    await answerAndNext(answer1);
+
+    // We're now on question 2
+    await waitFor(() => {
+      expect(screen.getByText(/Question 2 of/)).toBeInTheDocument();
+    });
+
+    // The textarea should be empty (different question)
+    const textarea2 = screen.getByRole('textbox');
+    expect(textarea2.value).toBe('');
   });
 
   it('calls onCancel when cancel clicked', () => {
@@ -242,5 +276,26 @@ describe('Questionnaire', () => {
     render(<Questionnaire {...makeProps({ onCancel })} />);
     fireEvent.click(screen.getByText('Cancel'));
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('uses initialPerson values for name and gender', () => {
+    const initialPerson = {
+      ...createInitialPerson(),
+      name: 'Existing',
+      gender: 'male',
+    };
+    render(<Questionnaire {...makeProps({ initialPerson })} />);
+    const nameInput = screen.getByPlaceholderText('What should we call you?');
+    expect(nameInput.value).toBe('Existing');
+    // Gender should be pre-selected (showing "Male" instead of "Select gender")
+    expect(screen.getByText('Male')).toBeInTheDocument();
+  });
+
+  it('displays personLabel in header', () => {
+    render(<Questionnaire {...makeProps({ personLabel: 'Person B' })} />);
+    const matches = screen.getAllByText('Person B');
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    // Should appear in the header bar
+    expect(matches[0]).toBeInTheDocument();
   });
 });

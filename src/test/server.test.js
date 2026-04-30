@@ -62,25 +62,16 @@ function makeValidPerson(overrides = {}) {
   return {
     name: 'Alice',
     gender: 'female',
-    enabledModules: [],
-    moduleAnswers: {
-      core: ['Answer one here', 'Answer two here', 'Answer three here'],
-    },
+    answers: ['Answer one here', 'Answer two here', 'Answer three here', 'Answer four here', 'Answer five here'],
     ...overrides,
   };
 }
 
-function makePersonWithModules(overrides = {}) {
+function makePersonWith6Answers(overrides = {}) {
   return {
     name: 'Alice',
     gender: 'female',
-    enabledModules: ['kokology', 'shadow', 'desire'],
-    moduleAnswers: {
-      core: ['Core answer 1', 'Core answer 2', 'Core answer 3'],
-      kokology: ['Kok 1', 'Kok 2', 'Kok 3', 'Kok 4'],
-      shadow: ['Shadow 1', 'Shadow 2', 'Shadow 3'],
-      desire: ['Desire 1', 'Desire 2'],
-    },
+    answers: ['Ans 1', 'Ans 2', 'Ans 3', 'Ans 4', 'Ans 5', 'Ans 6'],
     ...overrides,
   };
 }
@@ -95,6 +86,7 @@ function makeMockAnalyzeResponse() {
       complementProfile: 'Needs warmth.',
       likelyMistake: 'Picks builders.',
       growthEdge: 'Learn to receive.',
+      closingLine: 'He builds walls to feel safe.',
     },
     personB: {
       archetype: 'The Flame',
@@ -104,6 +96,7 @@ function makeMockAnalyzeResponse() {
       complementProfile: 'Needs structure.',
       likelyMistake: 'Picks intensity.',
       growthEdge: 'Learn to stay.',
+      closingLine: 'She burns through people looking for home.',
     },
     compatibility: {
       verdict: 'COMPLEMENT',
@@ -124,16 +117,17 @@ function makeMockRepairResponse() {
   return {
     repair: {
       realBreak: 'The real break.',
-      emotionalCalibration: {
-        personA: 'Person A calibration.',
-        personB: 'Person B calibration.',
-      },
-      dailyPractice: 'Do this daily.',
-      cognitiveRepair: 'Fix this thinking.',
-      revisionPractice: 'Revise this belief.',
-      equanimityPractice: 'Observe without reacting.',
-      shadowWork: 'Befriend this protector.',
-      communicationRepair: 'Say it this way instead.',
+      breakType: 'ATTACHMENT',
+      primaryMethod: 'Gottman Repair Attempts Protocol',
+      whyThisMethod: 'Because their attachment styles clash.',
+      practiceInstructions: 'Step one: notice the trigger. Step two: pause.',
+      measurableIndicators: 'They will argue less frequently.',
+      timeframe: '3-6 months of consistent practice.',
+      secondaryMethod: 'IFS Parts Dialogue',
+      secondaryPractice: 'Each person identifies their protector parts.',
+      warningSign: 'When he goes silent and she pursues.',
+      repairIsImpossibleIf: 'He refuses to acknowledge his emotional needs.',
+      closingLine: 'The repair is in the reaching, not the arriving.',
     },
   };
 }
@@ -141,15 +135,32 @@ function makeMockRepairResponse() {
 function makeMockSimulateResponse() {
   return {
     simulation: {
-      year1: 'Year one looks like this.',
-      year3: 'Year three changes things.',
-      year5: 'Year five is the test.',
-      year7: 'Year seven deepens or breaks.',
+      year1: {
+        examined: 'Year one examined path.',
+        unexamined: 'Year one unexamined path.',
+      },
+      year3: {
+        examined: 'Year three examined path.',
+        unexamined: 'Year three unexamined path.',
+      },
+      year5: {
+        examined: 'Year five examined path.',
+        unexamined: 'Year five unexamined path.',
+      },
+      year7: {
+        examined: 'Year seven examined path.',
+        unexamined: 'Year seven unexamined path.',
+      },
       year10: {
         bestCase: 'Best case at year ten.',
         worstCase: 'Worst case at year ten.',
       },
-      oneIntervention: 'Do this one thing.',
+      oneIntervention: {
+        when: 'During their first real fight.',
+        what: 'Name the pattern out loud.',
+        why: 'Breaking the unconscious cycle.',
+      },
+      closingLine: 'The future is a choice.',
     },
   };
 }
@@ -178,12 +189,12 @@ function setMockLLMResponse(data) {
 // --- Tests ---
 
 describe('validatePerson', () => {
-  it('returns null for a valid person with core only', () => {
+  it('returns null for a valid person with 5 answers', () => {
     expect(validatePerson(makeValidPerson(), 'Person A')).toBeNull();
   });
 
-  it('returns null for a valid person with optional modules', () => {
-    expect(validatePerson(makePersonWithModules(), 'Person A')).toBeNull();
+  it('returns null for a valid person with 6 answers', () => {
+    expect(validatePerson(makePersonWith6Answers(), 'Person A')).toBeNull();
   });
 
   it('rejects null / undefined input', () => {
@@ -207,85 +218,53 @@ describe('validatePerson', () => {
     expect(validatePerson(makeValidPerson({ gender: '' }), 'Person A')).toContain('gender');
   });
 
-  it('rejects missing moduleAnswers', () => {
+  it('rejects missing answers', () => {
     const person = makeValidPerson();
-    delete person.moduleAnswers;
-    expect(validatePerson(person, 'Person A')).toContain('moduleAnswers');
+    delete person.answers;
+    expect(validatePerson(person, 'Person A')).toContain('answers');
   });
 
-  it('rejects missing core answers', () => {
-    const person = makeValidPerson({ moduleAnswers: {} });
-    expect(validatePerson(person, 'Person A')).toContain('core');
+  it('rejects too few answers (less than 5)', () => {
+    const person = makeValidPerson({ answers: ['one', 'two', 'three'] });
+    expect(validatePerson(person, 'Person A')).toContain('5');
   });
 
-  it('rejects wrong number of core answers', () => {
-    const person = makeValidPerson({ moduleAnswers: { core: ['one'] } });
-    expect(validatePerson(person, 'Person A')).toContain('3');
+  it('rejects too many answers (more than 6)', () => {
+    const person = makeValidPerson({ answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] });
+    expect(validatePerson(person, 'Person A')).toContain('6');
   });
 
-  it('rejects empty core answer', () => {
+  it('rejects empty answer string', () => {
     const person = makeValidPerson({
-      moduleAnswers: { core: ['Answer', '', 'Answer'] },
+      answers: ['Answer', '', 'Answer', 'Answer', 'Answer'],
     });
-    expect(validatePerson(person, 'Person B')).toContain('core answer 2');
+    expect(validatePerson(person, 'Person B')).toContain('answer 2');
   });
 
-  it('rejects whitespace-only core answer', () => {
+  it('rejects whitespace-only answer', () => {
     const person = makeValidPerson({
-      moduleAnswers: { core: ['   ', 'Answer', 'Answer'] },
+      answers: ['   ', 'Answer', 'Answer', 'Answer', 'Answer'],
     });
-    expect(validatePerson(person, 'Person A')).toContain('core answer 1');
-  });
-
-  it('rejects non-array enabledModules', () => {
-    const person = makeValidPerson({ enabledModules: 'kokology' });
-    expect(validatePerson(person, 'Person A')).toContain('enabledModules');
-  });
-
-  it('rejects invalid module key', () => {
-    const person = makeValidPerson({ enabledModules: ['invalid_module'] });
-    expect(validatePerson(person, 'Person A')).toContain('invalid_module');
-  });
-
-  it('rejects core as enabled module (core is not optional)', () => {
-    const person = makeValidPerson({ enabledModules: ['core'] });
-    expect(validatePerson(person, 'Person A')).toContain('core');
-  });
-
-  it('rejects missing module answers for enabled module', () => {
-    const person = makeValidPerson({ enabledModules: ['kokology'] });
-    expect(validatePerson(person, 'Person A')).toContain('kokology');
-  });
-
-  it('rejects wrong count of module answers', () => {
-    const person = makeValidPerson({
-      enabledModules: ['kokology'],
-      moduleAnswers: { core: ['A1', 'A2', 'A3'], kokology: ['K1', 'K2'] },
-    });
-    expect(validatePerson(person, 'Person A')).toContain('4');
-  });
-
-  it('rejects empty string in module answers', () => {
-    const person = makeValidPerson({
-      enabledModules: ['shadow'],
-      moduleAnswers: { core: ['A1', 'A2', 'A3'], shadow: ['S1', '', 'S3'] },
-    });
-    expect(validatePerson(person, 'Person A')).toContain('shadow answer 2');
-  });
-
-  it('accepts contradictions module with 6 answers', () => {
-    const person = makeValidPerson({
-      enabledModules: ['contradictions'],
-      moduleAnswers: {
-        core: ['A1', 'A2', 'A3'],
-        contradictions: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
-      },
-    });
-    expect(validatePerson(person, 'Person A')).toBeNull();
+    expect(validatePerson(person, 'Person A')).toContain('answer 1');
   });
 
   it('uses the provided label in error messages', () => {
     expect(validatePerson(null, 'Person B')).toContain('Person B');
+  });
+
+  it('rejects non-array answers', () => {
+    const person = makeValidPerson({ answers: 'not an array' });
+    expect(validatePerson(person, 'Person A')).toContain('answers');
+  });
+
+  it('rejects legacy moduleAnswers format (no answers field)', () => {
+    const legacyPerson = {
+      name: 'Alice',
+      gender: 'female',
+      moduleAnswers: { core: ['a1', 'a2', 'a3'] },
+      enabledModules: [],
+    };
+    expect(validatePerson(legacyPerson, 'Person A')).toContain('answers');
   });
 });
 
@@ -297,6 +276,8 @@ describe('normalizeResult — analyze', () => {
     expect(result.personA.archetype).toBe('The Architect');
     expect(result.personA.loveTemplate).toBe('Earned through effort.');
     expect(result.personA.growthEdge).toBe('Learn to receive.');
+    expect(result.personA.closingLine).toBe('He builds walls to feel safe.');
+    expect(result.personB.closingLine).toBe('She burns through people looking for home.');
     expect(result.compatibility.score).toBe(78);
     expect(result.compatibility.earlyWarnings).toHaveLength(3);
     expect(result.compatibility.shadowCollision).toBe('Their shadows collide here.');
@@ -309,7 +290,9 @@ describe('normalizeResult — analyze', () => {
     expect(result.personA.coreWiring).toBe('');
     expect(result.personA.loveTemplate).toBe('');
     expect(result.personA.growthEdge).toBe('');
+    expect(result.personA.closingLine).toBe('');
     expect(result.personB.shadowPattern).toBe('');
+    expect(result.personB.closingLine).toBe('');
   });
 
   it('fills missing compatibility string fields with empty strings', () => {
@@ -428,55 +411,84 @@ describe('normalizeResult — analyze', () => {
 });
 
 describe('normalizeResult — repair', () => {
-  it('normalizes a valid repair response', () => {
+  it('normalizes a valid repair response with all 12 fields', () => {
     const raw = makeMockRepairResponse();
     const result = normalizeResult(raw, 'repair');
     expect(result.repair.realBreak).toBe('The real break.');
-    expect(result.repair.emotionalCalibration.personA).toBe('Person A calibration.');
-    expect(result.repair.emotionalCalibration.personB).toBe('Person B calibration.');
-    expect(result.repair.dailyPractice).toBe('Do this daily.');
+    expect(result.repair.breakType).toBe('ATTACHMENT');
+    expect(result.repair.primaryMethod).toBe('Gottman Repair Attempts Protocol');
+    expect(result.repair.whyThisMethod).toBe('Because their attachment styles clash.');
+    expect(result.repair.practiceInstructions).toBe('Step one: notice the trigger. Step two: pause.');
+    expect(result.repair.measurableIndicators).toBe('They will argue less frequently.');
+    expect(result.repair.timeframe).toBe('3-6 months of consistent practice.');
+    expect(result.repair.secondaryMethod).toBe('IFS Parts Dialogue');
+    expect(result.repair.secondaryPractice).toBe('Each person identifies their protector parts.');
+    expect(result.repair.warningSign).toBe('When he goes silent and she pursues.');
+    expect(result.repair.repairIsImpossibleIf).toBe('He refuses to acknowledge his emotional needs.');
+    expect(result.repair.closingLine).toBe('The repair is in the reaching, not the arriving.');
   });
 
   it('coerces non-string fields to empty strings', () => {
-    const raw = { repair: { realBreak: 42, dailyPractice: null } };
+    const raw = { repair: { realBreak: 42, primaryMethod: null } };
     const result = normalizeResult(raw, 'repair');
     expect(result.repair.realBreak).toBe('');
-    expect(result.repair.dailyPractice).toBe('');
+    expect(result.repair.primaryMethod).toBe('');
   });
 
-  it('handles missing emotionalCalibration', () => {
-    const raw = { repair: {} };
+  it('defaults breakType to SHADOW when invalid', () => {
+    const raw = { repair: { breakType: 'INVALID' } };
     const result = normalizeResult(raw, 'repair');
-    expect(result.repair.emotionalCalibration).toEqual({ personA: '', personB: '' });
+    expect(result.repair.breakType).toBe('SHADOW');
+  });
+
+  it('keeps valid breakType values', () => {
+    for (const bt of ['ATTACHMENT', 'COMMUNICATION', 'SHADOW', 'TRUST', 'VALUES', 'DESIRE']) {
+      const result = normalizeResult({ repair: { breakType: bt } }, 'repair');
+      expect(result.repair.breakType).toBe(bt);
+    }
   });
 
   it('handles completely empty input', () => {
     const result = normalizeResult({}, 'repair');
     expect(result.repair).toBeDefined();
     expect(result.repair.realBreak).toBe('');
-    expect(result.repair.communicationRepair).toBe('');
-    expect(result.repair.emotionalCalibration).toEqual({ personA: '', personB: '' });
+    expect(result.repair.closingLine).toBe('');
+    expect(result.repair.breakType).toBe('SHADOW'); // default
+  });
+
+  it('does not have old emotionalCalibration field', () => {
+    const result = normalizeResult({}, 'repair');
+    expect(result.repair.emotionalCalibration).toBeUndefined();
   });
 });
 
 describe('normalizeResult — simulate', () => {
-  it('normalizes a valid simulation response', () => {
+  it('normalizes a valid simulation response with nested year projections', () => {
     const raw = makeMockSimulateResponse();
     const result = normalizeResult(raw, 'simulate');
-    expect(result.simulation.year1).toBe('Year one looks like this.');
-    expect(result.simulation.year3).toBe('Year three changes things.');
+    expect(result.simulation.year1.examined).toBe('Year one examined path.');
+    expect(result.simulation.year1.unexamined).toBe('Year one unexamined path.');
+    expect(result.simulation.year3.examined).toBe('Year three examined path.');
+    expect(result.simulation.year3.unexamined).toBe('Year three unexamined path.');
+    expect(result.simulation.year5.examined).toBe('Year five examined path.');
+    expect(result.simulation.year7.unexamined).toBe('Year seven unexamined path.');
     expect(result.simulation.year10.bestCase).toBe('Best case at year ten.');
     expect(result.simulation.year10.worstCase).toBe('Worst case at year ten.');
-    expect(result.simulation.oneIntervention).toBe('Do this one thing.');
+    expect(result.simulation.oneIntervention.when).toBe('During their first real fight.');
+    expect(result.simulation.oneIntervention.what).toBe('Name the pattern out loud.');
+    expect(result.simulation.oneIntervention.why).toBe('Breaking the unconscious cycle.');
+    expect(result.simulation.closingLine).toBe('The future is a choice.');
   });
 
   it('coerces missing fields to empty strings', () => {
     const result = normalizeResult({}, 'simulate');
-    expect(result.simulation.year1).toBe('');
-    expect(result.simulation.year5).toBe('');
-    expect(result.simulation.year7).toBe('');
-    expect(result.simulation.oneIntervention).toBe('');
+    expect(result.simulation.year1).toEqual({ examined: '', unexamined: '' });
+    expect(result.simulation.year3).toEqual({ examined: '', unexamined: '' });
+    expect(result.simulation.year5).toEqual({ examined: '', unexamined: '' });
+    expect(result.simulation.year7).toEqual({ examined: '', unexamined: '' });
     expect(result.simulation.year10).toEqual({ bestCase: '', worstCase: '' });
+    expect(result.simulation.oneIntervention).toEqual({ when: '', what: '', why: '' });
+    expect(result.simulation.closingLine).toBe('');
   });
 
   it('coerces missing year10 fields to empty strings', () => {
@@ -485,20 +497,33 @@ describe('normalizeResult — simulate', () => {
     expect(result.simulation.year10.bestCase).toBe('good');
     expect(result.simulation.year10.worstCase).toBe('');
   });
+
+  it('coerces missing oneIntervention fields to empty strings', () => {
+    const raw = { simulation: { oneIntervention: { when: 'now' } } };
+    const result = normalizeResult(raw, 'simulate');
+    expect(result.simulation.oneIntervention.when).toBe('now');
+    expect(result.simulation.oneIntervention.what).toBe('');
+    expect(result.simulation.oneIntervention.why).toBe('');
+  });
+
+  it('handles partial year objects', () => {
+    const raw = { simulation: { year1: { examined: 'partial' } } };
+    const result = normalizeResult(raw, 'simulate');
+    expect(result.simulation.year1.examined).toBe('partial');
+    expect(result.simulation.year1.unexamined).toBe('');
+  });
 });
 
 describe('buildUserPayload', () => {
   const personA = {
     name: 'Alice',
     gender: 'female',
-    enabledModules: [],
-    moduleAnswers: { core: ['ans1', 'ans2', 'ans3'] },
+    answers: ['ans1', 'ans2', 'ans3', 'ans4', 'ans5'],
   };
   const personB = {
     name: 'Bob',
     gender: 'male',
-    enabledModules: [],
-    moduleAnswers: { core: ['ans4', 'ans5', 'ans6'] },
+    answers: ['ans4', 'ans5', 'ans6', 'ans7', 'ans8'],
   };
 
   it('includes both person names and genders', () => {
@@ -509,9 +534,9 @@ describe('buildUserPayload', () => {
     expect(msg).toContain('male');
   });
 
-  it('includes all core answers', () => {
+  it('includes all answers', () => {
     const msg = buildUserPayload(personA, personB, 'new_match');
-    for (const ans of [...personA.moduleAnswers.core, ...personB.moduleAnswers.core]) {
+    for (const ans of [...personA.answers, ...personB.answers]) {
       expect(msg).toContain(ans);
     }
   });
@@ -527,56 +552,31 @@ describe('buildUserPayload', () => {
     expect(msg).toContain('existing_couple');
   });
 
-  it('includes optional module question text and answers', () => {
-    const personWithModules = {
-      name: 'Alice',
-      gender: 'female',
-      enabledModules: ['kokology', 'shadow', 'desire'],
-      moduleAnswers: {
-        core: ['Core 1', 'Core 2', 'Core 3'],
-        kokology: ['Kok 1', 'Kok 2', 'Kok 3', 'Kok 4'],
-        shadow: ['Shadow 1', 'Shadow 2', 'Shadow 3'],
-        desire: ['Desire 1', 'Desire 2'],
-      },
-    };
-    const msg = buildUserPayload(personWithModules, personB, 'new_match');
-
-    // Should include module section headers
-    expect(msg).toContain('KOKOLOGY QUESTIONS:');
-    expect(msg).toContain('SHADOW QUESTIONS:');
-    expect(msg).toContain('DESIRE QUESTIONS:');
-
-    // Should include actual question text (not just "kokology Q1")
-    expect(msg).toContain('You are a child');
-    expect(msg).toContain('What trait in other people irritates you most');
-    expect(msg).toContain('What do you want from a partner');
-
-    // Should include the answers
-    expect(msg).toContain('Kok 1');
-    expect(msg).toContain('Shadow 1');
-    expect(msg).toContain('Desire 1');
+  it('includes layer labels for questions', () => {
+    const msg = buildUserPayload(personA, personB, 'new_match');
+    expect(msg).toContain('Layer 1: Surface');
+    expect(msg).toContain('Layer 2: Shadow');
+    expect(msg).toContain('Layer 3: Recognition');
+    expect(msg).toContain('Layer 4: Template');
+    expect(msg).toContain('Layer 5: Desire');
   });
 
-  it('includes contradiction question text for both halves', () => {
-    const personWithContradictions = {
-      name: 'Alice',
-      gender: 'female',
-      enabledModules: ['contradictions'],
-      moduleAnswers: {
-        core: ['Core 1', 'Core 2', 'Core 3'],
-        contradictions: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
-      },
-    };
-    const msg = buildUserPayload(personWithContradictions, personB, 'new_match');
+  it('includes question text from UNIVERSAL_QUESTIONS', () => {
+    const msg = buildUserPayload(personA, personB, 'new_match');
+    expect(msg).toContain('When something you deeply care about falls apart');
+    expect(msg).toContain('most afraid someone you love will eventually discover');
+  });
 
-    expect(msg).toContain('CONTRADICTIONS QUESTIONS:');
-    // Should include first-half question text
-    expect(msg).toContain('How would you describe yourself in one sentence');
-    // Should include second-half question text
-    expect(msg).toContain('How would your most recent ex describe you');
-    // Should include answers
-    expect(msg).toContain('C1');
-    expect(msg).toContain('C6');
+  it('includes gendered Q6 for person with 6 answers', () => {
+    const personWith6 = {
+      name: 'Charlie',
+      gender: 'male',
+      answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'],
+    };
+    const msg = buildUserPayload(personWith6, personB, 'new_match');
+    expect(msg).toContain('Layer 6: Gendered');
+    expect(msg).toContain('genuinely strong');
+    expect(msg).toContain('a6');
   });
 });
 
@@ -627,7 +627,7 @@ describe('POST /api/analyze', () => {
     expect(res.body.compatibility.repairLever).toBe('The one thing to fix.');
   });
 
-  it('returns all 7 ProfileOutput fields per person', async () => {
+  it('returns all 8 ProfileOutput fields per person (including closingLine)', async () => {
     setMockLLMResponse(makeMockAnalyzeResponse());
     const personA = makeValidPerson();
     const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
@@ -641,14 +641,15 @@ describe('POST /api/analyze', () => {
       expect(res.body[key]).toHaveProperty('complementProfile');
       expect(res.body[key]).toHaveProperty('likelyMistake');
       expect(res.body[key]).toHaveProperty('growthEdge');
+      expect(res.body[key]).toHaveProperty('closingLine');
     }
   });
 
-  it('rejects payloads with legacy answers field (no moduleAnswers)', async () => {
-    const legacyPerson = { name: 'Alice', gender: 'female', answers: ['a1', 'a2', 'a3'] };
+  it('rejects payloads with legacy moduleAnswers field (no answers)', async () => {
+    const legacyPerson = { name: 'Alice', gender: 'female', moduleAnswers: { core: ['a1', 'a2', 'a3'] } };
     const res = await api('POST', '/api/analyze', { personA: legacyPerson, personB: legacyPerson });
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('moduleAnswers');
+    expect(res.body.error).toContain('answers');
   });
 
   it('returns meta with provider and model', async () => {
@@ -667,7 +668,7 @@ describe('POST /api/repair', () => {
     mockCreate.mockReset();
   });
 
-  it('happy path returns { repair } with all 8 fields', async () => {
+  it('happy path returns { repair } with all 12 fields', async () => {
     setMockLLMResponse(makeMockRepairResponse());
     const personA = makeValidPerson();
     const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
@@ -680,14 +681,17 @@ describe('POST /api/repair', () => {
     expect(res.status).toBe(200);
     expect(res.body.repair).toBeDefined();
     expect(res.body.repair.realBreak).toBe('The real break.');
-    expect(res.body.repair.emotionalCalibration.personA).toBe('Person A calibration.');
-    expect(res.body.repair.emotionalCalibration.personB).toBe('Person B calibration.');
-    expect(res.body.repair.dailyPractice).toBe('Do this daily.');
-    expect(res.body.repair.cognitiveRepair).toBe('Fix this thinking.');
-    expect(res.body.repair.revisionPractice).toBe('Revise this belief.');
-    expect(res.body.repair.equanimityPractice).toBe('Observe without reacting.');
-    expect(res.body.repair.shadowWork).toBe('Befriend this protector.');
-    expect(res.body.repair.communicationRepair).toBe('Say it this way instead.');
+    expect(res.body.repair.breakType).toBe('ATTACHMENT');
+    expect(res.body.repair.primaryMethod).toBe('Gottman Repair Attempts Protocol');
+    expect(res.body.repair.whyThisMethod).toBe('Because their attachment styles clash.');
+    expect(res.body.repair.practiceInstructions).toBe('Step one: notice the trigger. Step two: pause.');
+    expect(res.body.repair.measurableIndicators).toBe('They will argue less frequently.');
+    expect(res.body.repair.timeframe).toBe('3-6 months of consistent practice.');
+    expect(res.body.repair.secondaryMethod).toBe('IFS Parts Dialogue');
+    expect(res.body.repair.secondaryPractice).toBe('Each person identifies their protector parts.');
+    expect(res.body.repair.warningSign).toBe('When he goes silent and she pursues.');
+    expect(res.body.repair.repairIsImpossibleIf).toBe('He refuses to acknowledge his emotional needs.');
+    expect(res.body.repair.closingLine).toBe('The repair is in the reaching, not the arriving.');
   });
 
   it('returns 400 when person data is missing', async () => {
@@ -723,13 +727,17 @@ describe('POST /api/repair', () => {
     setMockLLMResponse({
       repair: {
         realBreak: 42,
-        emotionalCalibration: { personA: true, personB: 99 },
-        dailyPractice: null,
-        cognitiveRepair: undefined,
-        revisionPractice: 'valid',
-        equanimityPractice: [],
-        shadowWork: {},
-        communicationRepair: 'also valid',
+        breakType: 'ATTACHMENT',
+        primaryMethod: null,
+        whyThisMethod: undefined,
+        practiceInstructions: 'valid',
+        measurableIndicators: [],
+        timeframe: {},
+        secondaryMethod: true,
+        secondaryPractice: 'also valid',
+        warningSign: 123,
+        repairIsImpossibleIf: 'honest',
+        closingLine: 'end',
       },
     });
     const personA = makeValidPerson();
@@ -742,28 +750,11 @@ describe('POST /api/repair', () => {
     });
     expect(res.status).toBe(200);
     expect(res.body.repair.realBreak).toBe('');
-    expect(res.body.repair.dailyPractice).toBe('');
-    expect(res.body.repair.emotionalCalibration.personA).toBe('');
-    expect(res.body.repair.emotionalCalibration.personB).toBe('');
-    expect(res.body.repair.revisionPractice).toBe('valid');
-    expect(res.body.repair.communicationRepair).toBe('also valid');
-  });
-
-  it('emotionalCalibration has personA and personB shape', async () => {
-    setMockLLMResponse(makeMockRepairResponse());
-    const personA = makeValidPerson();
-    const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
-    const res = await api('POST', '/api/repair', {
-      personA,
-      personB,
-      relationshipStatus: 'new_match',
-      compatibility: makeCompatibility(),
-    });
-    expect(res.status).toBe(200);
-    expect(res.body.repair.emotionalCalibration).toEqual({
-      personA: 'Person A calibration.',
-      personB: 'Person B calibration.',
-    });
+    expect(res.body.repair.primaryMethod).toBe('');
+    expect(res.body.repair.practiceInstructions).toBe('valid');
+    expect(res.body.repair.secondaryPractice).toBe('also valid');
+    expect(res.body.repair.repairIsImpossibleIf).toBe('honest');
+    expect(res.body.repair.closingLine).toBe('end');
   });
 });
 
@@ -772,7 +763,7 @@ describe('POST /api/simulate', () => {
     mockCreate.mockReset();
   });
 
-  it('happy path returns { simulation } with all fields', async () => {
+  it('happy path returns { simulation } with all nested fields', async () => {
     setMockLLMResponse(makeMockSimulateResponse());
     const personA = makeValidPerson();
     const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
@@ -784,13 +775,14 @@ describe('POST /api/simulate', () => {
     });
     expect(res.status).toBe(200);
     expect(res.body.simulation).toBeDefined();
-    expect(res.body.simulation.year1).toBe('Year one looks like this.');
-    expect(res.body.simulation.year3).toBe('Year three changes things.');
-    expect(res.body.simulation.year5).toBe('Year five is the test.');
-    expect(res.body.simulation.year7).toBe('Year seven deepens or breaks.');
+    expect(res.body.simulation.year1.examined).toBe('Year one examined path.');
+    expect(res.body.simulation.year1.unexamined).toBe('Year one unexamined path.');
     expect(res.body.simulation.year10.bestCase).toBe('Best case at year ten.');
     expect(res.body.simulation.year10.worstCase).toBe('Worst case at year ten.');
-    expect(res.body.simulation.oneIntervention).toBe('Do this one thing.');
+    expect(res.body.simulation.oneIntervention.when).toBe('During their first real fight.');
+    expect(res.body.simulation.oneIntervention.what).toBe('Name the pattern out loud.');
+    expect(res.body.simulation.oneIntervention.why).toBe('Breaking the unconscious cycle.');
+    expect(res.body.simulation.closingLine).toBe('The future is a choice.');
   });
 
   it('returns 400 when person data is missing', async () => {
@@ -827,7 +819,7 @@ describe('POST /api/simulate', () => {
   });
 
   it('missing year10 fields coerced to empty strings', async () => {
-    setMockLLMResponse({ simulation: { year1: 'y1', year10: {} } });
+    setMockLLMResponse({ simulation: { year1: { examined: 'y1e' }, year10: {} } });
     const personA = makeValidPerson();
     const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
     const res = await api('POST', '/api/simulate', {
@@ -841,7 +833,7 @@ describe('POST /api/simulate', () => {
     expect(res.body.simulation.year10.worstCase).toBe('');
   });
 
-  it('coerces missing simulation fields to empty strings', async () => {
+  it('coerces missing simulation fields to defaults', async () => {
     setMockLLMResponse({ simulation: {} });
     const personA = makeValidPerson();
     const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
@@ -852,11 +844,12 @@ describe('POST /api/simulate', () => {
       compatibility: makeCompatibility(),
     });
     expect(res.status).toBe(200);
-    expect(res.body.simulation.year1).toBe('');
-    expect(res.body.simulation.year3).toBe('');
-    expect(res.body.simulation.year5).toBe('');
-    expect(res.body.simulation.year7).toBe('');
-    expect(res.body.simulation.oneIntervention).toBe('');
+    expect(res.body.simulation.year1).toEqual({ examined: '', unexamined: '' });
+    expect(res.body.simulation.year3).toEqual({ examined: '', unexamined: '' });
+    expect(res.body.simulation.year5).toEqual({ examined: '', unexamined: '' });
+    expect(res.body.simulation.year7).toEqual({ examined: '', unexamined: '' });
+    expect(res.body.simulation.oneIntervention).toEqual({ when: '', what: '', why: '' });
+    expect(res.body.simulation.closingLine).toBe('');
   });
 });
 

@@ -9,4 +9,9 @@ export {
   TRUTH_PREAMBLE,
   INITIAL_PERSON,
   createInitialPerson,
+  UNIVERSAL_QUESTIONS,
+  GENDER_QUESTIONS,
+  getQuestionsForGender,
+  MIN_ANSWERS,
+  MAX_ANSWERS,
 } from '../../shared/questions.js';

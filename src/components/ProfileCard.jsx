@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Fingerprint, Brain, Eye, Heart, AlertCircle, Sprout, BookOpen } from 'lucide-react';
+import { Fingerprint, Brain, Eye, Heart, AlertCircle, Sprout, BookOpen, MessageCircle } from 'lucide-react';
 
 const sectionConfig = [
   { key: 'archetype', label: 'Archetype', icon: Fingerprint, isTitle: true },
@@ -77,6 +77,26 @@ export default function ProfileCard({ profile, color }) {
           </motion.div>
         );
       })}
+
+      {/* Closing Line */}
+      {profile.closingLine && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: sectionConfig.length * 0.1 }}
+          className={`mt-8 p-6 rounded-2xl bg-gradient-to-r ${color === 'rose' ? 'from-rose/5 to-rose/10' : 'from-accent/5 to-accent/10'} border ${colors.border} text-center`}
+        >
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <MessageCircle className={`w-4 h-4 ${colors.text}`} />
+            <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+              In One Line
+            </h3>
+          </div>
+          <p className={`text-text leading-relaxed italic font-medium`}>
+            {profile.closingLine}
+          </p>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

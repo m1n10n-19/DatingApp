@@ -2,14 +2,16 @@ import { THEORETICAL_FOUNDATION } from './foundation.js';
 
 const REPAIR_SCHEMA_INSTRUCTION = `
 ═══════════════════════════════════════
-REPAIR GUIDANCE TASK
+MODULE 3: REPAIR
 ═══════════════════════════════════════
 
-You are given two people's profiles, their compatibility analysis, and their relationship status. Generate a tailored repair and growth plan for this specific pair.
+You are given two people's profiles, their compatibility analysis, and their relationship status.
+
+Your job is not to give generic repair advice. Your job is to identify the ONE structural fracture underneath all the surface fights, and prescribe a specific, actionable repair protocol for THIS pair.
 
 RELATIONSHIP STATUS ADAPTATION:
-- When relationshipStatus is 'existing_couple': Emphasize de-escalation techniques, Gottman antidotes for their specific horseman cycle, repair attempts that work for their attachment styles, and concrete daily practices to reverse negative sentiment override. Assume they have existing patterns that need interruption.
-- When relationshipStatus is 'new_match': Emphasize prevention and shadow-awareness. Help them see the collision points before they calcify into patterns. Focus on building a culture of appreciation early, naming shadow material before it goes underground, and establishing communication norms before defaults take over.
+- When relationshipStatus is 'existing_couple': Emphasize de-escalation, Gottman antidotes for their specific horseman cycle, repair attempts for their attachment styles, and concrete daily practices. Assume existing patterns that need interruption.
+- When relationshipStatus is 'new_match': Emphasize prevention and shadow-awareness. Help them see collision points before they calcify. Focus on building appreciation early, naming shadow material before it goes underground, and establishing communication norms before defaults take over.
 
 ═══════════════════════════════════════
 OUTPUT FORMAT
@@ -20,19 +22,20 @@ Respond ONLY in this exact JSON structure. No preamble. No backticks. No markdow
 {
   "repair": {
     "realBreak": "The actual underlying break in this relationship — not the surface fights but the structural fracture underneath. 2-3 sentences.",
-    "emotionalCalibration": {
-      "personA": "Where Person A sits on the emotional calibration scale under relationship stress and what they need to shift. 2-3 sentences.",
-      "personB": "Where Person B sits on the emotional calibration scale under relationship stress and what they need to shift. 2-3 sentences."
-    },
-    "dailyPractice": "One specific daily practice tailored to this pair's dynamic — not generic mindfulness but something that targets their specific pattern. 2-3 sentences.",
-    "cognitiveRepair": "The specific cognitive distortion each person needs to catch and reframe, using Burns' framework. 2-3 sentences.",
-    "revisionPractice": "The core assumption each person needs to revise using Goddard's revision technique — the specific belief about love that is generating their current reality. 2-3 sentences.",
-    "equanimityPractice": "A Vipassana-informed practice for this pair — how to build the capacity to observe their trigger without reacting. Specific to their reactivity patterns. 2-3 sentences.",
-    "shadowWork": "The specific shadow integration work each person needs — using IFS parts language, name the protector to befriend and the exile to welcome. 2-3 sentences.",
-    "communicationRepair": "An NVC-structured reframe of their most common destructive exchange — translate their typical blame/defend cycle into observations, feelings, needs, requests. 3-4 sentences."
+    "breakType": "One of: ATTACHMENT, COMMUNICATION, SHADOW, TRUST, VALUES, DESIRE",
+    "primaryMethod": "The single most effective repair method for this specific break — named precisely (e.g., 'Gottman Repair Attempts Protocol', 'IFS Parts Dialogue', 'Vipassana Equanimity Practice'). One phrase.",
+    "whyThisMethod": "Why this specific method targets their specific fracture. 2-3 sentences.",
+    "practiceInstructions": "Step-by-step instructions for the primary method, specific to this pair. Reference their actual patterns. 3-5 sentences.",
+    "measurableIndicators": "How they will know it's working — specific behavioral changes to watch for. 2-3 sentences.",
+    "timeframe": "Realistic timeline for visible change with consistent practice. 1 sentence.",
+    "secondaryMethod": "A complementary method that supports the primary one. One phrase.",
+    "secondaryPractice": "Brief instructions for the secondary method. 2-3 sentences.",
+    "warningSign": "The specific behavior that signals they are regressing into the old pattern. 1-2 sentences.",
+    "repairIsImpossibleIf": "The honest condition under which this repair cannot work — the line that, if crossed, means the structural fracture is load-bearing and removal would collapse the relationship. 1-2 sentences.",
+    "closingLine": "One sentence that captures the repair truth for this pair."
   }
 }
 
-All 8 fields must be present. emotionalCalibration must contain both personA and personB as strings.`;
+All 12 fields must be present. breakType must be exactly one of: ATTACHMENT, COMMUNICATION, SHADOW, TRUST, VALUES, DESIRE.`;
 
 export const REPAIR_PROMPT = THEORETICAL_FOUNDATION + '\n\n' + REPAIR_SCHEMA_INSTRUCTION;

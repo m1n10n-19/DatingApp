@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, AlertTriangle, Cpu, Loader2, Heart, Sparkles, Clock, Wrench } from 'lucide-react';
+import {
+  RotateCcw, AlertTriangle, Cpu, Loader2, Sparkles,
+  Clock, Wrench, Shield, Eye, MessageCircle, Target,
+  Activity, Timer, Lightbulb, XCircle,
+} from 'lucide-react';
 import ProfileCard from './ProfileCard';
 import CompatibilitySection from './CompatibilitySection';
 import { getTabButtonClasses } from '../utils/styles';
@@ -188,7 +192,17 @@ export default function Results({
   );
 }
 
-function RepairTab({ repair, loading, error, onRequest, personAName, personBName }) {
+/* ---------- Break type badge colors ---------- */
+const breakTypeBadgeColors = {
+  ATTACHMENT: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  COMMUNICATION: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  SHADOW: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  TRUST: 'bg-red-500/10 text-red-400 border-red-500/20',
+  VALUES: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  DESIRE: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
+};
+
+function RepairTab({ repair, loading, error, onRequest }) {
   if (error) {
     return (
       <TabErrorState
@@ -204,15 +218,7 @@ function RepairTab({ repair, loading, error, onRequest, personAName, personBName
   }
 
   if (repair) {
-    const sections = [
-      { key: 'realBreak', label: 'The Real Break', icon: AlertTriangle },
-      { key: 'dailyPractice', label: 'Daily Practice', icon: Heart },
-      { key: 'cognitiveRepair', label: 'Cognitive Repair', icon: Sparkles },
-      { key: 'revisionPractice', label: 'Revision Practice', icon: Wrench },
-      { key: 'equanimityPractice', label: 'Equanimity Practice', icon: Heart },
-      { key: 'shadowWork', label: 'Shadow Work', icon: Sparkles },
-      { key: 'communicationRepair', label: 'Communication Repair', icon: Wrench },
-    ];
+    const badgeColor = breakTypeBadgeColors[repair.breakType] || 'bg-accent/10 text-accent border-accent/20';
 
     return (
       <motion.div
@@ -220,51 +226,175 @@ function RepairTab({ repair, loading, error, onRequest, personAName, personBName
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {sections.map((section, index) => {
-          const Icon = section.icon;
-          return (
-            <motion.div
-              key={section.key}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.08 }}
-              className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <Icon className="w-4 h-4 text-accent" />
-                <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
-                  {section.label}
-                </h3>
-              </div>
-              <p className="text-text leading-relaxed">{repair[section.key]}</p>
-            </motion.div>
-          );
-        })}
+        {/* Real Break — header with break type badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0 }}
+          className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <AlertTriangle className="w-4 h-4 text-accent" />
+            <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+              The Real Break
+            </h3>
+            {repair.breakType && (
+              <span className={`ml-auto text-xs font-semibold px-3 py-1 rounded-full border ${badgeColor}`}>
+                {repair.breakType}
+              </span>
+            )}
+          </div>
+          <p className="text-text leading-relaxed">{repair.realBreak}</p>
+        </motion.div>
 
-        {/* Emotional Calibration — special two-person section */}
-        {repair.emotionalCalibration && (
+        {/* Primary Method + Why */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="w-4 h-4 text-accent" />
+            <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+              Primary Method
+            </h3>
+          </div>
+          <p className="text-text leading-relaxed font-medium mb-4">{repair.primaryMethod}</p>
+          {repair.whyThisMethod && (
+            <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-3.5 h-3.5 text-accent" />
+                <h4 className="text-xs font-medium text-text-dim uppercase tracking-wide">Why This Method</h4>
+              </div>
+              <p className="text-text leading-relaxed text-sm">{repair.whyThisMethod}</p>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Practice Instructions */}
+        {repair.practiceInstructions && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
+            transition={{ delay: 0.16 }}
             className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <Heart className="w-4 h-4 text-accent" />
+            <div className="flex items-center gap-2 mb-3">
+              <Wrench className="w-4 h-4 text-accent" />
               <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
-                Emotional Calibration
+                Practice Instructions
               </h3>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-accent/5 border border-accent/20">
-                <h4 className="text-sm font-semibold text-accent mb-2">{personAName}</h4>
-                <p className="text-text leading-relaxed text-sm">{repair.emotionalCalibration.personA}</p>
+            <p className="text-text leading-relaxed">{repair.practiceInstructions}</p>
+          </motion.div>
+        )}
+
+        {/* Measurable Indicators + Timeframe */}
+        {(repair.measurableIndicators || repair.timeframe) && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.24 }}
+            className="mb-6 grid md:grid-cols-2 gap-4"
+          >
+            {repair.measurableIndicators && (
+              <div className="p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                    Measurable Indicators
+                  </h3>
+                </div>
+                <p className="text-text leading-relaxed text-sm">{repair.measurableIndicators}</p>
               </div>
-              <div className="p-4 rounded-xl bg-rose/5 border border-rose/20">
-                <h4 className="text-sm font-semibold text-rose mb-2">{personBName}</h4>
-                <p className="text-text leading-relaxed text-sm">{repair.emotionalCalibration.personB}</p>
+            )}
+            {repair.timeframe && (
+              <div className="p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <Timer className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                    Timeframe
+                  </h3>
+                </div>
+                <p className="text-text leading-relaxed text-sm">{repair.timeframe}</p>
               </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Secondary Method + Practice */}
+        {(repair.secondaryMethod || repair.secondaryPractice) && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32 }}
+            className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="w-4 h-4 text-accent" />
+              <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                Secondary Method
+              </h3>
             </div>
+            <p className="text-text leading-relaxed font-medium mb-3">{repair.secondaryMethod}</p>
+            {repair.secondaryPractice && (
+              <p className="text-text leading-relaxed text-sm text-text-dim">{repair.secondaryPractice}</p>
+            )}
+          </motion.div>
+        )}
+
+        {/* Warning Sign */}
+        {repair.warningSign && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.40 }}
+            className="mb-6 p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20 hover:border-amber-500/40 transition-all duration-300"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Eye className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                Warning Sign
+              </h3>
+            </div>
+            <p className="text-text leading-relaxed">{repair.warningSign}</p>
+          </motion.div>
+        )}
+
+        {/* Repair Is Impossible If */}
+        {repair.repairIsImpossibleIf && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.48 }}
+            className="mb-6 p-6 rounded-2xl bg-rose/5 border border-rose/20 hover:border-rose/40 transition-all duration-300"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <XCircle className="w-4 h-4 text-rose" />
+              <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                Repair Is Impossible If
+              </h3>
+            </div>
+            <p className="text-text leading-relaxed">{repair.repairIsImpossibleIf}</p>
+          </motion.div>
+        )}
+
+        {/* Closing Line */}
+        {repair.closingLine && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.56 }}
+            className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-accent/5 to-rose/5 border border-accent/20 text-center"
+          >
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <MessageCircle className="w-4 h-4 text-accent" />
+              <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                In One Line
+              </h3>
+            </div>
+            <p className="text-text leading-relaxed italic font-medium">{repair.closingLine}</p>
           </motion.div>
         )}
       </motion.div>
@@ -283,7 +413,7 @@ function RepairTab({ repair, loading, error, onRequest, personAName, personBName
       </div>
       <h3 className="font-serif text-2xl font-bold text-text mb-3">Repair Guidance</h3>
       <p className="text-text-dim mb-8 max-w-md mx-auto">
-        Generate personalized repair strategies based on the compatibility analysis. Includes emotional calibration, daily practices, and communication tools.
+        Generate personalized repair strategies based on the compatibility analysis. Includes targeted methods, practice instructions, and measurable indicators.
       </p>
       <button
         onClick={onRequest}
@@ -325,23 +455,43 @@ function SimulateTab({ simulation, loading, error, onRequest }) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {yearSections.map((section, index) => (
-          <motion.div
-            key={section.key}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-accent" />
-              <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
-                {section.label}
-              </h3>
-            </div>
-            <p className="text-text leading-relaxed">{simulation[section.key]}</p>
-          </motion.div>
-        ))}
+        {/* Years 1, 3, 5, 7 — dual path: Examined vs Unexamined */}
+        {yearSections.map((section, index) => {
+          const yearData = simulation[section.key];
+          // Support both old (string) and new (object with examined/unexamined) formats
+          const isStructured = yearData && typeof yearData === 'object';
+
+          return (
+            <motion.div
+              key={section.key}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-4 h-4 text-accent" />
+                <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                  {section.label}
+                </h3>
+              </div>
+              {isStructured ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-sage/5 border border-sage/20">
+                    <h4 className="text-sm font-semibold text-sage mb-2">Examined</h4>
+                    <p className="text-text leading-relaxed text-sm">{yearData.examined}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                    <h4 className="text-sm font-semibold text-amber-400 mb-2">Unexamined</h4>
+                    <p className="text-text leading-relaxed text-sm">{yearData.unexamined}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-text leading-relaxed">{yearData}</p>
+              )}
+            </motion.div>
+          );
+        })}
 
         {/* Year 10 — Best/Worst Case */}
         {simulation.year10 && (
@@ -370,7 +520,7 @@ function SimulateTab({ simulation, loading, error, onRequest }) {
           </motion.div>
         )}
 
-        {/* One Intervention */}
+        {/* One Intervention — structured with when/what/why */}
         {simulation.oneIntervention && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -378,13 +528,54 @@ function SimulateTab({ simulation, loading, error, onRequest }) {
             transition={{ delay: 0.5 }}
             className="mb-6 p-6 rounded-2xl bg-gradient-to-r from-accent/5 to-rose/5 border border-accent/20 hover:border-accent/40 transition-all duration-300"
           >
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-4 h-4 text-accent" />
               <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
                 If You Only Do One Thing
               </h3>
             </div>
-            <p className="text-text leading-relaxed font-medium">{simulation.oneIntervention}</p>
+            {typeof simulation.oneIntervention === 'object' ? (
+              <div className="space-y-3">
+                {simulation.oneIntervention.when && (
+                  <div>
+                    <span className="text-xs font-semibold text-accent uppercase tracking-wide">When: </span>
+                    <span className="text-text leading-relaxed text-sm">{simulation.oneIntervention.when}</span>
+                  </div>
+                )}
+                {simulation.oneIntervention.what && (
+                  <div>
+                    <span className="text-xs font-semibold text-accent uppercase tracking-wide">What: </span>
+                    <span className="text-text leading-relaxed text-sm font-medium">{simulation.oneIntervention.what}</span>
+                  </div>
+                )}
+                {simulation.oneIntervention.why && (
+                  <div>
+                    <span className="text-xs font-semibold text-accent uppercase tracking-wide">Why: </span>
+                    <span className="text-text leading-relaxed text-sm">{simulation.oneIntervention.why}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-text leading-relaxed font-medium">{simulation.oneIntervention}</p>
+            )}
+          </motion.div>
+        )}
+
+        {/* Closing Line */}
+        {simulation.closingLine && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-accent/5 to-rose/5 border border-accent/20 text-center"
+          >
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <MessageCircle className="w-4 h-4 text-accent" />
+              <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                In One Line
+              </h3>
+            </div>
+            <p className="text-text leading-relaxed italic font-medium">{simulation.closingLine}</p>
           </motion.div>
         )}
       </motion.div>

@@ -1,27 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, User, ChevronDown } from 'lucide-react';
-import {
-  CORE_QUESTIONS,
-  KOKOLOGY_QUESTIONS,
-  SHADOW_QUESTIONS,
-  DESIRE_QUESTIONS,
-  CONTRADICTION_PAIRS,
-  MODULE_DEFS,
-} from '../services/questions';
+import { getQuestionsForGender } from '../services/questions';
 import { getActionButtonClasses } from '../utils/styles';
-
-const PHASES = [
-  'name_gender',
-  'core',
-  'module_select',
-  'contradictions_first',
-  'kokology',
-  'shadow',
-  'desire',
-  'contradictions_second',
-  'done',
-];
 
 const genderOptions = [
   { value: 'male', label: 'Male' },
@@ -36,130 +17,47 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
   const [gender, setGender] = useState(initialPerson?.gender || '');
   const [genderOpen, setGenderOpen] = useState(false);
 
-  // Module answers
-  const [coreAnswers, setCoreAnswers] = useState(
-    () => initialPerson?.moduleAnswers?.core?.slice() || ['', '', '']
-  );
-  const [kokologyAnswers, setKokologyAnswers] = useState(
-    () => initialPerson?.moduleAnswers?.kokology?.slice() || ['', '', '', '']
-  );
-  const [shadowAnswers, setShadowAnswers] = useState(
-    () => initialPerson?.moduleAnswers?.shadow?.slice() || ['', '', '']
-  );
-  const [desireAnswers, setDesireAnswers] = useState(
-    () => initialPerson?.moduleAnswers?.desire?.slice() || ['', '']
-  );
-  // Contradictions: 6 answers total (3 first-half, 3 second-half)
-  const [contradictionAnswers, setContradictionAnswers] = useState(
-    () => initialPerson?.moduleAnswers?.contradictions?.slice() || ['', '', '', '', '', '']
+  // Flat answers array (5 or 6 entries)
+  const [answers, setAnswers] = useState(
+    () => initialPerson?.answers?.slice() || ['', '', '', '', '', '']
   );
 
-  // Enabled optional modules
-  const [enabledModules, setEnabledModules] = useState(
-    () => initialPerson?.enabledModules?.slice() || []
-  );
-
-  // Current question index within a phase
+  // Current question index within the questions phase
   const [questionIdx, setQuestionIdx] = useState(0);
 
   const nextButtonRef = useRef(null);
 
-  // Questions for the current phase
-  const currentQuestions = useMemo(() => {
-    switch (phase) {
-      case 'core':
-        return CORE_QUESTIONS;
-      case 'kokology':
-        return KOKOLOGY_QUESTIONS;
-      case 'shadow':
-        return SHADOW_QUESTIONS;
-      case 'desire':
-        return DESIRE_QUESTIONS;
-      case 'contradictions_first':
-        return CONTRADICTION_PAIRS.map((p) => p.first);
-      case 'contradictions_second':
-        return CONTRADICTION_PAIRS.map((p) => p.second);
-      default:
-        return [];
-    }
-  }, [phase]);
+  // Get the questions list based on gender
+  const questions = useMemo(() => getQuestionsForGender(gender), [gender]);
 
-  const currentAnswers = useMemo(() => {
-    switch (phase) {
-      case 'core':
-        return coreAnswers;
-      case 'kokology':
-        return kokologyAnswers;
-      case 'shadow':
-        return shadowAnswers;
-      case 'desire':
-        return desireAnswers;
-      case 'contradictions_first':
-        return contradictionAnswers.slice(0, 3);
-      case 'contradictions_second':
-        return contradictionAnswers.slice(3, 6);
-      default:
-        return [];
-    }
-  }, [phase, coreAnswers, kokologyAnswers, shadowAnswers, desireAnswers, contradictionAnswers]);
-
-  const answerConfigs = {
-    core: { getter: () => coreAnswers, setter: setCoreAnswers },
-    kokology: { getter: () => kokologyAnswers, setter: setKokologyAnswers },
-    shadow: { getter: () => shadowAnswers, setter: setShadowAnswers },
-    desire: { getter: () => desireAnswers, setter: setDesireAnswers },
-    contradictions_first: { getter: () => contradictionAnswers, setter: setContradictionAnswers },
-    contradictions_second: { getter: () => contradictionAnswers, setter: setContradictionAnswers, offset: 3 },
-  };
-
-  const setCurrentAnswer = (idx, value) => {
-    const config = answerConfigs[phase];
-    if (!config) return;
-    const next = [...config.getter()];
-    next[idx + (config.offset || 0)] = value;
-    config.setter(next);
-  };
-
-  // Determine the next phase, skipping disabled modules
-  const getNextPhase = (currentPhase) => {
-    const idx = PHASES.indexOf(currentPhase);
-    for (let i = idx + 1; i < PHASES.length; i++) {
-      const p = PHASES[i];
-      // Skip disabled optional module phases
-      if (p === 'contradictions_first' && !enabledModules.includes('contradictions')) continue;
-      if (p === 'contradictions_second' && !enabledModules.includes('contradictions')) continue;
-      if (p === 'kokology' && !enabledModules.includes('kokology')) continue;
-      if (p === 'shadow' && !enabledModules.includes('shadow')) continue;
-      if (p === 'desire' && !enabledModules.includes('desire')) continue;
-      return p;
-    }
-    return 'done';
+  const setAnswer = (idx, value) => {
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[idx] = value;
+      return next;
+    });
   };
 
   const advancePhase = () => {
-    const next = getNextPhase(phase);
-    setPhase(next);
-    setQuestionIdx(0);
-    if (next === 'done') {
+    if (phase === 'name_gender') {
+      setPhase('questions');
+      setQuestionIdx(0);
+    } else if (phase === 'questions') {
+      setPhase('done');
       const profile = buildProfile();
       onComplete(profile);
     }
   };
 
   const buildProfile = () => {
-    const moduleAnswers = { core: coreAnswers };
-    if (enabledModules.includes('kokology')) moduleAnswers.kokology = kokologyAnswers;
-    if (enabledModules.includes('shadow')) moduleAnswers.shadow = shadowAnswers;
-    if (enabledModules.includes('desire')) moduleAnswers.desire = desireAnswers;
-    if (enabledModules.includes('contradictions')) moduleAnswers.contradictions = contradictionAnswers;
-
+    // Trim answers to the actual question count (5 or 6)
+    const trimmedAnswers = answers.slice(0, questions.length);
     return {
       id: initialPerson?.id || crypto.randomUUID(),
       name: name.trim(),
       gender,
-      enabledModules: [...enabledModules],
-      moduleAnswers,
-      schemaVersion: 1,
+      answers: trimmedAnswers,
+      schemaVersion: 2,
       createdAt: initialPerson?.createdAt || new Date().toISOString(),
     };
   };
@@ -167,9 +65,9 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
   // Validation
   const canProceedFromIntro = name.trim().length > 0 && gender.length > 0;
   const canProceedFromQuestion =
-    currentQuestions.length > 0 &&
-    questionIdx < currentQuestions.length &&
-    currentAnswers[questionIdx]?.trim().length > 20;
+    phase === 'questions' &&
+    questionIdx < questions.length &&
+    answers[questionIdx]?.trim().length > 20;
 
   // Scroll the Next button into view when the answer becomes valid
   useEffect(() => {
@@ -179,56 +77,18 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
   }, [canProceedFromQuestion]);
 
   const handleNextQuestion = () => {
-    if (questionIdx < currentQuestions.length - 1) {
+    if (questionIdx < questions.length - 1) {
       setQuestionIdx(questionIdx + 1);
     } else {
       advancePhase();
     }
   };
 
-  // Module toggle
-  const toggleModule = (key) => {
-    setEnabledModules((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
-
   // Progress calculation
-  const isPhaseEnabled = (p) =>
-    p === 'name_gender' ||
-    p === 'core' ||
-    p === 'module_select' ||
-    p === 'done' ||
-    (p === 'contradictions_first' && enabledModules.includes('contradictions')) ||
-    (p === 'contradictions_second' && enabledModules.includes('contradictions')) ||
-    (p === 'kokology' && enabledModules.includes('kokology')) ||
-    (p === 'shadow' && enabledModules.includes('shadow')) ||
-    (p === 'desire' && enabledModules.includes('desire'));
-
-  const totalPhases = PHASES.filter(isPhaseEnabled).length;
-  const currentPhaseIdx = PHASES.filter(
-    (p, i) => i <= PHASES.indexOf(phase) && isPhaseEnabled(p)
-  ).length;
-  const progress = Math.min(100, (currentPhaseIdx / totalPhases) * 100);
-
-  const phaseLabel = () => {
-    switch (phase) {
-      case 'core':
-        return 'Core';
-      case 'kokology':
-        return 'Kokology';
-      case 'shadow':
-        return 'Shadow';
-      case 'desire':
-        return 'Desire';
-      case 'contradictions_first':
-        return 'Contradictions (part 1)';
-      case 'contradictions_second':
-        return 'Contradictions (part 2)';
-      default:
-        return '';
-    }
-  };
+  // Total steps = 1 (name_gender) + questions.length
+  const totalSteps = 1 + questions.length;
+  const currentStep = phase === 'name_gender' ? 1 : 1 + questionIdx + 1;
+  const progress = Math.min(100, (currentStep / totalSteps) * 100);
 
   return (
     <div className="min-h-screen flex flex-col px-6 pt-8 pb-16">
@@ -341,7 +201,7 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
               <motion.button
                 whileHover={{ scale: canProceedFromIntro ? 1.02 : 1 }}
                 whileTap={{ scale: canProceedFromIntro ? 0.98 : 1 }}
-                onClick={() => canProceedFromIntro && setPhase('core')}
+                onClick={() => canProceedFromIntro && advancePhase()}
                 disabled={!canProceedFromIntro}
                 className={`mt-10 ${getActionButtonClasses(canProceedFromIntro)}`}
               >
@@ -351,89 +211,34 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
             </motion.div>
           )}
 
-          {/* MODULE SELECT PHASE */}
-          {phase === 'module_select' && (
+          {/* QUESTIONS PHASE */}
+          {phase === 'questions' && (
             <motion.div
-              key="module_select"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.4 }}
-            >
-              <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2 text-text">
-                Add depth modules?
-              </h2>
-              <p className="text-text-dim mb-8">
-                These optional modules reveal deeper patterns. You can skip them for now.
-              </p>
-
-              <div className="space-y-3 mb-8">
-                {MODULE_DEFS.filter((m) => !m.required).map((mod) => {
-                  const checked = enabledModules.includes(mod.key);
-                  return (
-                    <label
-                      key={mod.key}
-                      className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
-                        checked
-                          ? 'border-accent/40 bg-accent/5'
-                          : 'border-surface-light/50 bg-surface/20 hover:border-surface-light'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleModule(mod.key)}
-                        className="w-4 h-4 accent-[#c9a0dc]"
-                      />
-                      <div>
-                        <p className="font-medium text-text">{mod.label}</p>
-                        <p className="text-xs text-text-faint">{mod.count} questions</p>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.02, boxShadow: '0 0 40px rgba(201, 160, 220, 0.3)' }}
-                whileTap={{ scale: 0.98 }}
-                onClick={advancePhase}
-                className={getActionButtonClasses(true)}
-              >
-                {enabledModules.length > 0 ? 'Continue' : 'Skip depth modules'}
-                <ArrowRight className="w-4 h-4" />
-              </motion.button>
-            </motion.div>
-          )}
-
-          {/* QUESTION PHASES */}
-          {['core', 'kokology', 'shadow', 'desire', 'contradictions_first', 'contradictions_second'].includes(phase) && (
-            <motion.div
-              key={`${phase}-${questionIdx}`}
+              key={`question-${questionIdx}`}
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.4 }}
             >
               <p className="text-sm text-accent mb-2 font-medium tracking-wide uppercase">
-                {phaseLabel()} — Question {questionIdx + 1} of {currentQuestions.length}
+                {questions[questionIdx]?.label} — Question {questionIdx + 1} of {questions.length}
               </p>
               <h2 className="font-serif text-xl md:text-2xl font-semibold mb-4 text-text leading-snug">
-                {currentQuestions[questionIdx]?.text}
+                {questions[questionIdx]?.text}
               </h2>
 
               <textarea
-                value={currentAnswers[questionIdx] || ''}
-                onChange={(e) => setCurrentAnswer(questionIdx, e.target.value)}
-                placeholder={currentQuestions[questionIdx]?.placeholder}
+                value={answers[questionIdx] || ''}
+                onChange={(e) => setAnswer(questionIdx, e.target.value)}
+                placeholder={questions[questionIdx]?.placeholder}
                 rows={3}
                 className="w-full bg-surface/60 border border-surface-light rounded-xl px-5 py-4 text-text placeholder:text-text-faint focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all resize-none leading-relaxed"
               />
 
               <div className="flex items-center justify-between mt-4">
                 <p className="text-xs text-text-faint">
-                  {(currentAnswers[questionIdx]?.trim().length || 0) < 20
-                    ? `${20 - (currentAnswers[questionIdx]?.trim().length || 0)} more characters needed`
+                  {(answers[questionIdx]?.trim().length || 0) < 20
+                    ? `${20 - (answers[questionIdx]?.trim().length || 0)} more characters needed`
                     : 'Ready to continue'}
                 </p>
               </div>
@@ -446,9 +251,7 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
                   disabled={!canProceedFromQuestion}
                   className={`mt-8 ${getActionButtonClasses(canProceedFromQuestion)}`}
                 >
-                  {questionIdx === currentQuestions.length - 1 && getNextPhase(phase) === 'done'
-                    ? 'Complete'
-                    : 'Next question'}
+                  {questionIdx === questions.length - 1 ? 'Complete' : 'Next question'}
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
               </div>

@@ -1,149 +1,90 @@
-export const CORE_QUESTIONS = [
+/**
+ * Universal 5-question sequence for all users, plus gender-specific Q6.
+ * Replaces the previous modular questionnaire (core + optional modules).
+ */
+
+export const UNIVERSAL_QUESTIONS = [
   {
     id: 1,
+    layer: 'Surface',
+    label: 'Layer 1: Surface',
     text: "When something you deeply care about falls apart — a relationship, a project, a belief — what do you actually do? Not what you tell people. What happens in the first 72 hours when no one is watching?",
     placeholder: "Be honest. Not what sounds good — what actually happens...",
-    module: 'core',
   },
   {
     id: 2,
+    layer: 'Shadow',
+    label: 'Layer 2: Shadow',
     text: "What's the thing you're most afraid someone you love will eventually discover about you? Not a secret — a pattern, a tendency, the thing you manage around so they never quite see it clearly.",
     placeholder: "The thing you work hardest to keep from being seen...",
-    module: 'core',
   },
   {
     id: 3,
+    layer: 'Recognition',
+    label: 'Layer 3: Recognition',
     text: "Describe the last time you felt genuinely understood by another person. What did they do or say that made you feel that way? If you can't remember a time — that's an answer too.",
     placeholder: "What does being truly seen feel like to you...",
-    module: 'core',
-  },
-];
-
-export const KOKOLOGY_QUESTIONS = [
-  {
-    id: 'kokology-childhood-box',
-    text: "You are a child. You find a box in an attic. Describe the box and what's inside.",
-    placeholder: "Describe the box — its size, condition, what you find when you open it...",
-    module: 'kokology',
   },
   {
-    id: 'kokology-forest-water',
-    text: "You walk through a forest and reach water. Describe the forest and the water.",
-    placeholder: "What does the forest look like? What kind of water do you find?",
-    module: 'kokology',
+    id: 4,
+    layer: 'Template',
+    label: 'Layer 4: Template',
+    text: "What did love look like in the home you grew up in? Not what you wished it looked like — what you actually saw, day to day, between the people who were supposed to love each other.",
+    placeholder: "What love actually looked like, not the ideal...",
   },
   {
-    id: 'kokology-house-rooms',
-    text: "You enter a house. Describe the rooms you walk through and what's in each.",
-    placeholder: "Walk through the house in your mind — what do you see in each room?",
-    module: 'kokology',
-  },
-  {
-    id: 'kokology-animal-path',
-    text: "An animal blocks your path. Describe the animal, what it's doing, what you do.",
-    placeholder: "What animal is it? What's its demeanor? How do you respond?",
-    module: 'kokology',
-  },
-];
-
-export const SHADOW_QUESTIONS = [
-  {
-    id: 'shadow-irritation',
-    text: "What trait in other people irritates you most? Be specific.",
-    placeholder: "Not a general pet peeve — the specific behavior that gets under your skin...",
-    module: 'shadow',
-  },
-  {
-    id: 'shadow-hidden-self',
-    text: "Describe the version of yourself you most don't want people to see.",
-    placeholder: "The version you hide — not a bad day, but a pattern you manage around...",
-    module: 'shadow',
-  },
-  {
-    id: 'shadow-childhood-template',
-    text: "What did love look like in the home you grew up in? Not what you wished — what you actually saw.",
-    placeholder: "Describe what love actually looked like day to day, not the ideal...",
-    module: 'shadow',
-  },
-];
-
-export const DESIRE_QUESTIONS = [
-  {
-    id: 'desire-unadmitted',
-    text: "What do you want from a partner that you've never said out loud?",
+    id: 5,
+    layer: 'Desire',
+    label: 'Layer 5: Desire',
+    text: "What do you want from a partner that you've never said out loud? The thing you want but have never actually asked for — because asking would make you too vulnerable, or because you're afraid the answer is that it doesn't exist.",
     placeholder: "The thing you want but have never actually asked for...",
-    module: 'desire',
-  },
-  {
-    id: 'desire-alive-dead',
-    text: "Describe the moment you've felt most alive in a relationship. Then the moment you've felt most dead.",
-    placeholder: "Two moments — one where you felt fully alive, one where something in you shut down...",
-    module: 'desire',
   },
 ];
 
-export const CONTRADICTION_PAIRS = [
-  {
-    pairId: 1,
-    first: {
-      id: 'contradiction-1a',
-      text: "How would you describe yourself in one sentence?",
-      placeholder: "One sentence — honest, not polished...",
-    },
-    second: {
-      id: 'contradiction-1b',
-      text: "How would your most recent ex describe you in one sentence?",
-      placeholder: "What would they actually say — not what you'd want them to say...",
-    },
-    module: 'contradictions',
+export const GENDER_QUESTIONS = {
+  male: {
+    id: 6,
+    layer: 'Gendered',
+    label: 'Layer 6: Gendered',
+    text: "Describe a moment when you felt genuinely strong — not performing strength, not being 'the rock,' but actually strong in a way that didn't require you to suppress anything. If you can't think of one, describe what you think it would feel like.",
+    placeholder: "Real strength, not performed strength...",
   },
-  {
-    pairId: 2,
-    first: {
-      id: 'contradiction-2a',
-      text: "What do you want most in a relationship?",
-      placeholder: "The real answer, not the dating-profile answer...",
-    },
-    second: {
-      id: 'contradiction-2b',
-      text: "What scares you most about getting it?",
-      placeholder: "What frightens you about actually receiving what you want...",
-    },
-    module: 'contradictions',
+  female: {
+    id: 6,
+    layer: 'Gendered',
+    label: 'Layer 6: Gendered',
+    text: "Describe a moment when you felt genuinely safe with another person — not comfortable, not familiar, but actually safe in a way that let you stop performing. If you can't think of one, describe what you think it would feel like.",
+    placeholder: "Real safety, not just comfort or familiarity...",
   },
-  {
-    pairId: 3,
-    first: {
-      id: 'contradiction-3a',
-      text: "Describe a time you gave too much in a relationship.",
-      placeholder: "When you over-extended — what did that look like?",
-    },
-    second: {
-      id: 'contradiction-3b',
-      text: "Describe a time you didn't give enough.",
-      placeholder: "When you held back — what were you protecting?",
-    },
-    module: 'contradictions',
-  },
-];
+};
 
-export const MODULE_DEFS = [
-  { key: 'core', label: 'Core (required)', required: true, count: 3 },
-  { key: 'kokology', label: 'Kokology', required: false, count: 4 },
-  { key: 'shadow', label: 'Shadow', required: false, count: 3 },
-  { key: 'desire', label: 'Desire', required: false, count: 2 },
-  { key: 'contradictions', label: 'Contradiction pairs', required: false, count: 6 },
-];
+/**
+ * Returns the full question list for a person, given their gender.
+ * Always returns Q1-Q5. Appends Q6 if gender is 'male' or 'female'.
+ */
+export function getQuestionsForGender(gender) {
+  const questions = [...UNIVERSAL_QUESTIONS];
+  const genderKey = typeof gender === 'string' ? gender.toLowerCase() : '';
+  if (GENDER_QUESTIONS[genderKey]) {
+    questions.push(GENDER_QUESTIONS[genderKey]);
+  }
+  return questions;
+}
 
 export const TRUTH_PREAMBLE = "This only works if you tell the truth — not the version of yourself you'd put on a resume, but the version that exists when no one's watching. We're going to ask you questions that most people avoid, not because they're cruel, but because honest answers are the only ones worth analyzing. If you perform here, the results will describe whoever you're pretending to be, not who you actually are. That's a waste of everyone's time. So be specific. Be uncomfortable. Say the thing you'd normally edit out. The algorithm can't judge you, but it can see through you — but only if you let it.";
+
+/**
+ * Answers count: 5 universal + up to 1 gendered = 5 or 6 total.
+ */
+export const MIN_ANSWERS = 5;
+export const MAX_ANSWERS = 6;
 
 export const INITIAL_PERSON = Object.freeze({
   id: '',
   name: '',
   gender: '',
-  enabledModules: [],
-  moduleAnswers: Object.freeze({ core: Object.freeze(['', '', '']) }),
-  schemaVersion: 1,
+  answers: Object.freeze(['', '', '', '', '', '']),
+  schemaVersion: 2,
   createdAt: null,
 });
 
@@ -156,12 +97,36 @@ export function createInitialPerson() {
     id: crypto.randomUUID(),
     name: '',
     gender: '',
-    enabledModules: [],
-    moduleAnswers: { core: ['', '', ''] },
-    schemaVersion: 1,
+    answers: ['', '', '', '', '', ''],
+    schemaVersion: 2,
     createdAt: new Date().toISOString(),
   };
 }
 
-/** @deprecated Use CORE_QUESTIONS directly. Kept for legacy compatibility. */
+// ── Legacy / backward-compatible re-exports ──
+// These are kept so that the existing frontend (Task 3 will remove these imports)
+// and other consumers don't break during the migration.
+
+/** @deprecated Use UNIVERSAL_QUESTIONS. Kept for legacy compatibility. */
+export const CORE_QUESTIONS = UNIVERSAL_QUESTIONS.slice(0, 3).map((q) => ({
+  ...q,
+  module: 'core',
+}));
+
+/** @deprecated Removed in v2 schema. Kept as empty array for compatibility. */
+export const KOKOLOGY_QUESTIONS = [];
+
+/** @deprecated Removed in v2 schema. Kept as empty array for compatibility. */
+export const SHADOW_QUESTIONS = [];
+
+/** @deprecated Removed in v2 schema. Kept as empty array for compatibility. */
+export const DESIRE_QUESTIONS = [];
+
+/** @deprecated Removed in v2 schema. Kept as empty array for compatibility. */
+export const CONTRADICTION_PAIRS = [];
+
+/** @deprecated Removed in v2 schema. Kept as empty array for compatibility. */
+export const MODULE_DEFS = [];
+
+/** @deprecated Use UNIVERSAL_QUESTIONS directly. Kept for legacy compatibility. */
 export const QUESTIONS = CORE_QUESTIONS;
