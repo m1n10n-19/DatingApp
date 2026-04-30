@@ -16,6 +16,12 @@ if (!process.env.GROQ_API_KEY) {
   process.env.GROQ_API_KEY = _GROQ_DEFAULT;
 }
 
+// Default Gemini key requested by user
+const _GEMINI_DEFAULT = 'AIzaSyBkxU_zlOwkYLN-qm6mi2FPad6JxHSIiao';
+if (!process.env.GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = _GEMINI_DEFAULT;
+}
+
 // Gemini requires GEMINI_API_KEY to be set in .env — no default provided.
 // If not set, Gemini provider will be listed as unavailable in /api/models.
 
