@@ -2,16 +2,125 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
+import { QUESTIONS } from '../shared/questions.js';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// --- CORS: restrict to known frontend origins ---
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173')
+  .split(',')
+  .map((o) => o.trim());
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow requests with no origin (curl, server-to-server, same-origin proxied)
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+  })
+);
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// --- Simple in-memory rate limiter ---
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '10', 10);
+const ipHits = new Map();
+
+function rateLimit(req, res, next) {
+  const ip = req.ip;
+  const now = Date.now();
+  let record = ipHits.get(ip);
+  if (!record || now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
+    record = { windowStart: now, count: 0 };
+    ipHits.set(ip, record);
+  }
+  record.count += 1;
+  if (record.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a minute and try again.' });
+  }
+  next();
+}
+
+// Periodically clean up stale entries (every 5 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of ipHits) {
+    if (now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
+      ipHits.delete(ip);
+    }
+  }
+}, 5 * 60_000);
+
+let openai = null;
+
+function getOpenAIClient() {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.');
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
+
+// --- Input validation ---
+function validatePerson(person, label) {
+  if (!person || typeof person !== 'object') {
+    return `${label} data is required.`;
+  }
+  if (typeof person.name !== 'string' || person.name.trim().length === 0) {
+    return `${label} must have a non-empty name.`;
+  }
+  if (typeof person.gender !== 'string' || person.gender.length === 0) {
+    return `${label} must have a gender.`;
+  }
+  if (!Array.isArray(person.answers) || person.answers.length !== QUESTIONS.length) {
+    return `${label} must have exactly ${QUESTIONS.length} answers.`;
+  }
+  for (let i = 0; i < person.answers.length; i++) {
+    if (typeof person.answers[i] !== 'string' || person.answers[i].trim().length === 0) {
+      return `${label} answer ${i + 1} must be a non-empty string.`;
+    }
+  }
+  return null;
+}
+
+// --- Output validation / normalization ---
+const PERSON_FIELDS = ['archetype', 'coreWiring', 'shadowPattern', 'complementProfile', 'likelyMistake'];
+const COMPAT_STRING_FIELDS = ['verdict', 'dynamic', 'breakingPoint', 'bestCase', 'worstCase', 'closingLine'];
+
+function normalizeResult(raw) {
+  const result = { personA: {}, personB: {}, compatibility: {} };
+
+  // Normalize person profiles
+  for (const key of ['personA', 'personB']) {
+    const src = raw[key] || {};
+    for (const field of PERSON_FIELDS) {
+      result[key][field] = typeof src[field] === 'string' ? src[field] : '';
+    }
+  }
+
+  // Normalize compatibility
+  const compat = raw.compatibility || {};
+  for (const field of COMPAT_STRING_FIELDS) {
+    result.compatibility[field] = typeof compat[field] === 'string' ? compat[field] : '';
+  }
+  result.compatibility.score =
+    typeof compat.score === 'number' ? Math.max(0, Math.min(100, Math.round(compat.score))) : 0;
+  result.compatibility.earlyWarnings = Array.isArray(compat.earlyWarnings)
+    ? compat.earlyWarnings.filter((w) => typeof w === 'string')
+    : [];
+
+  return result;
+}
 
 const SYSTEM_PROMPT = `You are a personality architect specializing in relationship complementarity. You analyze people not by what they want but by who they actually are — their deep wiring, behavioral patterns, and unconscious gaps.
 
@@ -182,38 +291,32 @@ Rare people have rare matches. The tragedy isn't that their match doesn't exist 
 
 Every analysis you produce is a recognition engine. Build it in service of that.`;
 
-app.post('/api/analyze', async (req, res) => {
+function buildUserMessage(personA, personB) {
+  // Build per-person sections using the shared question texts
+  function personSection(person) {
+    return `(${person.name}, ${person.gender}):\n${QUESTIONS.map(
+      (q, i) => `Question ${i + 1}: ${q.text}\nAnswer: ${person.answers[i]}`
+    ).join('\n\n')}`;
+  }
+
+  return `Analyze these two people:\n\nPERSON A ${personSection(personA)}\n\nPERSON B ${personSection(personB)}`;
+}
+
+app.post('/api/analyze', rateLimit, async (req, res) => {
   try {
     const { personA, personB } = req.body;
 
-    if (!personA || !personB) {
-      return res.status(400).json({ error: 'Both person A and person B data are required' });
-    }
+    // Validate inputs
+    const errorA = validatePerson(personA, 'Person A');
+    if (errorA) return res.status(400).json({ error: errorA });
+    const errorB = validatePerson(personB, 'Person B');
+    if (errorB) return res.status(400).json({ error: errorB });
 
-    const userMessage = `Analyze these two people:
+    const userMessage = buildUserMessage(personA, personB);
 
-PERSON A (${personA.name}, ${personA.gender}):
-Question 1: When something you deeply care about falls apart — a relationship, a project, a belief — what do you actually do? Not what you tell people. What happens in the first 72 hours when no one is watching?
-Answer: ${personA.answers[0]}
-
-Question 2: What's the thing you're most afraid someone you love will eventually discover about you? Not a secret — a pattern, a tendency, the thing you manage around so they never quite see it clearly.
-Answer: ${personA.answers[1]}
-
-Question 3: Describe the last time you felt genuinely understood by another person. What did they do or say that made you feel that way? If you can't remember a time — that's an answer too.
-Answer: ${personA.answers[2]}
-
-PERSON B (${personB.name}, ${personB.gender}):
-Question 1: When something you deeply care about falls apart — a relationship, a project, a belief — what do you actually do? Not what you tell people. What happens in the first 72 hours when no one is watching?
-Answer: ${personB.answers[0]}
-
-Question 2: What's the thing you're most afraid someone you love will eventually discover about you? Not a secret — a pattern, a tendency, the thing you manage around so they never quite see it clearly.
-Answer: ${personB.answers[1]}
-
-Question 3: Describe the last time you felt genuinely understood by another person. What did they do or say that made you feel that way? If you can't remember a time — that's an answer too.
-Answer: ${personB.answers[2]}`;
-
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: 'gpt-4o',
+      response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
@@ -223,19 +326,8 @@ Answer: ${personB.answers[2]}`;
     });
 
     const responseText = completion.choices[0].message.content.trim();
-
-    // Try to parse the JSON response
-    let result;
-    try {
-      result = JSON.parse(responseText);
-    } catch {
-      // If the response has markdown code blocks, strip them
-      const cleaned = responseText
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      result = JSON.parse(cleaned);
-    }
+    const raw = JSON.parse(responseText);
+    const result = normalizeResult(raw);
 
     res.json(result);
   } catch (error) {
@@ -246,6 +338,9 @@ Answer: ${personB.answers[2]}`;
     });
   }
 });
+
+// Export for testing
+export { app, validatePerson, normalizeResult, buildUserMessage };
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

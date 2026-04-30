@@ -36,9 +36,10 @@ const verdictConfig = {
   },
 };
 
-export default function CompatibilitySection({ data, personA, personB }) {
-  const verdict = verdictConfig[data.verdict] || verdictConfig.COMPLEMENT;
+export default function CompatibilitySection({ compatibility }) {
+  const verdict = verdictConfig[compatibility.verdict] || verdictConfig.COMPLEMENT;
   const VerdictIcon = verdict.icon;
+  const warnings = Array.isArray(compatibility.earlyWarnings) ? compatibility.earlyWarnings : [];
 
   return (
     <motion.div
@@ -78,13 +79,13 @@ export default function CompatibilitySection({ data, personA, personB }) {
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 52}`}
               initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
-              animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - data.score / 100) }}
+              animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - (compatibility.score ?? 0) / 100) }}
               transition={{ duration: 1.5, delay: 0.3, ease: 'easeOut' }}
             />
             <defs>
               <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#c9a0dc" />
-                <stop offset="100%" stopColor="#e76f8a" />
+                <stop offset="0%" stopColor="var(--color-accent)" />
+                <stop offset="100%" stopColor="var(--color-rose)" />
               </linearGradient>
             </defs>
           </svg>
@@ -95,7 +96,7 @@ export default function CompatibilitySection({ data, personA, personB }) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
-              {data.score}
+              {compatibility.score ?? 0}
             </motion.span>
             <span className="text-xs text-text-faint uppercase tracking-wider">Score</span>
           </div>
@@ -108,7 +109,7 @@ export default function CompatibilitySection({ data, personA, personB }) {
         icon={<Zap className="w-4 h-4 text-accent" />}
         delay={0.2}
       >
-        <p className="text-text leading-relaxed">{data.dynamic}</p>
+        <p className="text-text leading-relaxed">{compatibility.dynamic}</p>
       </Section>
 
       {/* Breaking Point */}
@@ -117,7 +118,7 @@ export default function CompatibilitySection({ data, personA, personB }) {
         icon={<AlertTriangle className="w-4 h-4 text-warm" />}
         delay={0.3}
       >
-        <p className="text-text leading-relaxed">{data.breakingPoint}</p>
+        <p className="text-text leading-relaxed">{compatibility.breakingPoint}</p>
       </Section>
 
       {/* Best Case / Worst Case */}
@@ -128,7 +129,7 @@ export default function CompatibilitySection({ data, personA, personB }) {
           delay={0.4}
           compact
         >
-          <p className="text-text leading-relaxed text-sm">{data.bestCase}</p>
+          <p className="text-text leading-relaxed text-sm">{compatibility.bestCase}</p>
         </Section>
 
         <Section
@@ -137,30 +138,32 @@ export default function CompatibilitySection({ data, personA, personB }) {
           delay={0.5}
           compact
         >
-          <p className="text-text leading-relaxed text-sm">{data.worstCase}</p>
+          <p className="text-text leading-relaxed text-sm">{compatibility.worstCase}</p>
         </Section>
       </div>
 
       {/* Early Warning Signs */}
-      <Section
-        title="Early Warning Signs"
-        icon={<AlertTriangle className="w-4 h-4 text-warm" />}
-        delay={0.6}
-      >
-        <div className="space-y-3">
-          {data.earlyWarnings.map((warning, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-warm/10 border border-warm/20 flex items-center justify-center text-xs text-warm font-medium mt-0.5">
-                {i + 1}
-              </span>
-              <p className="text-text leading-relaxed text-sm">{warning}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
+      {warnings.length > 0 && (
+        <Section
+          title="Early Warning Signs"
+          icon={<AlertTriangle className="w-4 h-4 text-warm" />}
+          delay={0.6}
+        >
+          <div className="space-y-3">
+            {warnings.map((warning, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-warm/10 border border-warm/20 flex items-center justify-center text-xs text-warm font-medium mt-0.5">
+                  {i + 1}
+                </span>
+                <p className="text-text leading-relaxed text-sm">{warning}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Closing Line */}
-      {data.closingLine && (
+      {compatibility.closingLine && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -169,7 +172,7 @@ export default function CompatibilitySection({ data, personA, personB }) {
         >
           <Quote className="w-6 h-6 text-accent/40 mx-auto mb-4" />
           <p className="font-serif text-xl md:text-2xl text-text italic leading-relaxed max-w-xl mx-auto">
-            &ldquo;{data.closingLine}&rdquo;
+            &ldquo;{compatibility.closingLine}&rdquo;
           </p>
         </motion.div>
       )}

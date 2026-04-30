@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { RotateCcw, AlertTriangle } from 'lucide-react';
 import ProfileCard from './ProfileCard';
 import CompatibilitySection from './CompatibilitySection';
+import { getTabButtonClasses } from '../utils/styles';
 
 export default function Results({ results, error, personA, personB, onReset }) {
   const [activeTab, setActiveTab] = useState('compatibility');
@@ -65,11 +66,7 @@ export default function Results({ results, error, personA, personB, onReset }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-accent/20 to-rose/20 border border-accent/30 text-text'
-                  : 'bg-surface/40 border border-surface-light/50 text-text-dim hover:text-text hover:border-surface-light'
-              }`}
+              className={getTabButtonClasses(activeTab === tab.id)}
             >
               {tab.label}
             </button>
@@ -78,23 +75,17 @@ export default function Results({ results, error, personA, personB, onReset }) {
 
         {/* Content */}
         {activeTab === 'compatibility' && (
-          <CompatibilitySection
-            data={results.compatibility}
-            personA={personA}
-            personB={personB}
-          />
+          <CompatibilitySection compatibility={results.compatibility} />
         )}
         {activeTab === 'personA' && (
           <ProfileCard
-            data={results.personA}
-            name={personA.name}
+            profile={results.personA}
             color="accent"
           />
         )}
         {activeTab === 'personB' && (
           <ProfileCard
-            data={results.personB}
-            name={personB.name}
+            profile={results.personB}
             color="rose"
           />
         )}

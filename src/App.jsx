@@ -3,7 +3,7 @@ import Landing from './components/Landing';
 import PersonForm from './components/PersonForm';
 import Analyzing from './components/Analyzing';
 import Results from './components/Results';
-import { QUESTIONS } from './services/questions';
+import { QUESTIONS, createInitialPerson } from './services/questions';
 
 const STEPS = {
   LANDING: 'landing',
@@ -15,8 +15,8 @@ const STEPS = {
 
 export default function App() {
   const [step, setStep] = useState(STEPS.LANDING);
-  const [personA, setPersonA] = useState({ name: '', gender: '', answers: ['', '', ''] });
-  const [personB, setPersonB] = useState({ name: '', gender: '', answers: ['', '', ''] });
+  const [personA, setPersonA] = useState(createInitialPerson);
+  const [personB, setPersonB] = useState(createInitialPerson);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
 
@@ -40,8 +40,14 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.details || errData.error || 'Analysis failed');
+        let errorMessage = 'Analysis failed. Please try again.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.details || errData.error || errorMessage;
+        } catch {
+          // Response body wasn't valid JSON — use generic message
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -49,15 +55,17 @@ export default function App() {
       setStep(STEPS.RESULTS);
     } catch (err) {
       console.error('Analysis error:', err);
-      setError(err.message);
+      // Show user-friendly message for network/connection errors
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      setError(isNetworkError ? 'Unable to connect to the server. Please ensure the backend is running.' : err.message);
       setStep(STEPS.RESULTS);
     }
   };
 
   const handleReset = () => {
     setStep(STEPS.LANDING);
-    setPersonA({ name: '', gender: '', answers: ['', '', ''] });
-    setPersonB({ name: '', gender: '', answers: ['', '', ''] });
+    setPersonA(createInitialPerson());
+    setPersonB(createInitialPerson());
     setResults(null);
     setError(null);
   };

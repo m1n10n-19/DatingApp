@@ -9,7 +9,7 @@ const sectionConfig = [
   { key: 'likelyMistake', label: 'Likely Mistake', icon: AlertCircle },
 ];
 
-export default function ProfileCard({ data, name, color }) {
+export default function ProfileCard({ profile, color }) {
   const colorClasses = {
     accent: {
       border: 'border-accent/20',
@@ -35,7 +35,7 @@ export default function ProfileCard({ data, name, color }) {
     >
       {sectionConfig.map((section, index) => {
         const Icon = section.icon;
-        const value = data[section.key];
+        const value = profile[section.key];
 
         if (section.isTitle) {
           return (
