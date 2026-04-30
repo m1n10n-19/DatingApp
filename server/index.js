@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 
 // --- CORS: restrict to known frontend origins ---
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173')
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173,https://78fgddzmd0zu.preview.us1.vorflux.com')
   .split(',')
   .map((o) => o.trim());
 
@@ -17,11 +17,12 @@ app.use(
   cors({
     origin(origin, callback) {
       // Allow requests with no origin (curl, server-to-server, same-origin proxied)
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      if (!origin) return callback(null, true);
+      // Allow explicitly listed origins
+      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      // Allow any Vorflux preview URL
+      if (origin.endsWith('.preview.us1.vorflux.com')) return callback(null, true);
+      callback(new Error('Not allowed by CORS'));
     },
   })
 );
