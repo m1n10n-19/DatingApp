@@ -3,6 +3,7 @@ import Landing from './components/Landing';
 import PersonForm from './components/PersonForm';
 import Analyzing from './components/Analyzing';
 import Results from './components/Results';
+import ModelSelector from './components/ModelSelector';
 import { QUESTIONS, createInitialPerson } from './services/questions';
 
 const STEPS = {
@@ -19,8 +20,15 @@ export default function App() {
   const [personB, setPersonB] = useState(createInitialPerson);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
+  const [provider, setProvider] = useState('groq');
+  const [model, setModel] = useState('llama-3.3-70b-versatile');
 
   const handleStart = () => setStep(STEPS.PERSON_A);
+
+  const handleModelChange = (newProvider, newModel) => {
+    setProvider(newProvider);
+    setModel(newModel);
+  };
 
   const handlePersonAComplete = (data) => {
     setPersonA(data);
@@ -36,7 +44,7 @@ export default function App() {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ personA, personB: data }),
+        body: JSON.stringify({ personA, personB: data, provider, model }),
       });
 
       if (!response.ok) {
@@ -70,8 +78,20 @@ export default function App() {
     setError(null);
   };
 
+  // Show model selector on all steps except analyzing
+  const showModelSelector = step !== STEPS.ANALYZING;
+
   return (
     <div className="min-h-screen">
+      {showModelSelector && (
+        <div className="fixed top-4 right-4 z-50">
+          <ModelSelector
+            selectedProvider={provider}
+            selectedModel={model}
+            onChange={handleModelChange}
+          />
+        </div>
+      )}
       {step === STEPS.LANDING && <Landing onStart={handleStart} />}
       {step === STEPS.PERSON_A && (
         <PersonForm

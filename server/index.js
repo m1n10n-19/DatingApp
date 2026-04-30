@@ -57,19 +57,104 @@ setInterval(() => {
   }
 }, 5 * 60_000);
 
-let openai = null;
+// --- Multi-provider model configuration ---
+const MODEL_PROVIDERS = {
+  groq: {
+    name: 'Groq',
+    baseURL: 'https://api.groq.com/openai/v1',
+    envKey: 'GROQ_API_KEY',
+    models: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
+      { id: 'llama3-70b-8192', name: 'Llama 3 70B' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
+    ],
+    supportsJsonFormat: false,
+  },
+  openai: {
+    name: 'OpenAI',
+    baseURL: 'https://api.openai.com/v1',
+    envKey: 'OPENAI_API_KEY',
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+    ],
+    supportsJsonFormat: true,
+  },
+  gemini: {
+    name: 'Google Gemini',
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    envKey: 'GEMINI_API_KEY',
+    models: [
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+    ],
+    supportsJsonFormat: true,
+  },
+  claude: {
+    name: 'Anthropic Claude',
+    baseURL: 'https://api.anthropic.com/v1/',
+    envKey: 'ANTHROPIC_API_KEY',
+    models: [
+      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
+    ],
+    supportsJsonFormat: false,
+  },
+};
 
-function getOpenAIClient() {
-  if (!openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.');
-    }
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+// Cache of OpenAI-compatible clients per provider
+const clients = new Map();
+
+function getClient(providerId) {
+  if (clients.has(providerId)) {
+    return clients.get(providerId);
+  }
+
+  const provider = MODEL_PROVIDERS[providerId];
+  if (!provider) {
+    throw new Error(`Unknown provider: ${providerId}`);
+  }
+
+  const apiKey = process.env[provider.envKey];
+  if (!apiKey) {
+    throw new Error(
+      `${provider.name} API key is not configured. Please set ${provider.envKey} in your .env file.`
+    );
+  }
+
+  const clientOptions = {
+    apiKey,
+    baseURL: provider.baseURL,
+  };
+
+  // Anthropic requires a version header for OpenAI-compatible requests
+  if (providerId === 'claude') {
+    clientOptions.defaultHeaders = { 'anthropic-version': '2023-06-01' };
+  }
+
+  const client = new OpenAI(clientOptions);
+  clients.set(providerId, client);
+  return client;
+}
+
+// --- Endpoint: list available providers and models ---
+app.get('/api/models', (_req, res) => {
+  const available = [];
+  for (const [id, provider] of Object.entries(MODEL_PROVIDERS)) {
+    const hasKey = !!process.env[provider.envKey];
+    available.push({
+      id,
+      name: provider.name,
+      available: hasKey,
+      models: provider.models,
     });
   }
-  return openai;
-}
+  res.json(available);
+});
 
 // --- Input validation ---
 function validatePerson(person, label) {
@@ -304,7 +389,7 @@ function buildUserMessage(personA, personB) {
 
 app.post('/api/analyze', rateLimit, async (req, res) => {
   try {
-    const { personA, personB } = req.body;
+    const { personA, personB, provider: providerId = 'groq', model: modelId } = req.body;
 
     // Validate inputs
     const errorA = validatePerson(personA, 'Person A');
@@ -312,22 +397,54 @@ app.post('/api/analyze', rateLimit, async (req, res) => {
     const errorB = validatePerson(personB, 'Person B');
     if (errorB) return res.status(400).json({ error: errorB });
 
+    // Validate provider
+    const providerConfig = MODEL_PROVIDERS[providerId];
+    if (!providerConfig) {
+      return res.status(400).json({ error: `Unknown provider: ${providerId}` });
+    }
+
+    // Use specified model or default to first model for the provider
+    const selectedModel = modelId || providerConfig.models[0].id;
+
+    const client = getClient(providerId);
     const userMessage = buildUserMessage(personA, personB);
 
-    const completion = await getOpenAIClient().chat.completions.create({
-      model: 'gpt-4o',
-      response_format: { type: 'json_object' },
+    const requestParams = {
+      model: selectedModel,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
       temperature: 0.85,
       max_tokens: 3000,
-    });
+    };
+
+    // Only add response_format for providers that support it
+    if (providerConfig.supportsJsonFormat) {
+      requestParams.response_format = { type: 'json_object' };
+    }
+
+    const completion = await client.chat.completions.create(requestParams);
 
     const responseText = completion.choices[0].message.content.trim();
-    const raw = JSON.parse(responseText);
+
+    // Parse JSON — handle models that wrap in markdown code blocks
+    let raw;
+    try {
+      raw = JSON.parse(responseText);
+    } catch {
+      const cleaned = responseText
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      raw = JSON.parse(cleaned);
+    }
+
     const result = normalizeResult(raw);
+    result.meta = {
+      provider: providerConfig.name,
+      model: selectedModel,
+    };
 
     res.json(result);
   } catch (error) {
@@ -339,8 +456,16 @@ app.post('/api/analyze', rateLimit, async (req, res) => {
   }
 });
 
+// CORS error handler — return JSON instead of Express default HTML error page
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ error: 'CORS: origin not allowed' });
+  }
+  next(err);
+});
+
 // Export for testing
-export { app, validatePerson, normalizeResult, buildUserMessage };
+export { app, validatePerson, normalizeResult, buildUserMessage, MODEL_PROVIDERS };
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

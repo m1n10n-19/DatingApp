@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { RotateCcw, AlertTriangle, Cpu } from 'lucide-react';
 import ProfileCard from './ProfileCard';
 import CompatibilitySection from './CompatibilitySection';
 import { getTabButtonClasses } from '../utils/styles';
@@ -48,6 +48,14 @@ export default function Results({ results, error, personA, personB, onReset }) {
           className="text-center mb-12"
         >
           <p className="text-sm text-accent mb-2 font-medium tracking-wide uppercase">Analysis Complete</p>
+          {results.meta && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface/40 border border-surface-light/30 mb-4">
+              <Cpu className="w-3 h-3 text-text-faint" />
+              <span className="text-xs text-text-faint">
+                {results.meta.provider} / {results.meta.model}
+              </span>
+            </div>
+          )}
           <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">
             <span className="text-accent">{personA.name}</span>
             <span className="text-text-faint mx-3">&amp;</span>
