@@ -65,22 +65,6 @@ describe('CompatibilitySection', () => {
     expect(datingFatigueRiskIdx).toBeLessThan(closingLineIdx);
   });
 
-  it('renders coreFearInteraction section with heading', () => {
-    render(
-      <CompatibilitySection compatibility={baseCompatibility} />
-    );
-    expect(screen.getByText('Core Fear Interaction')).toBeInTheDocument();
-    expect(screen.getByText(baseCompatibility.coreFearInteraction)).toBeInTheDocument();
-  });
-
-  it('renders datingFatigueRisk section with prominent styling', () => {
-    render(
-      <CompatibilitySection compatibility={baseCompatibility} />
-    );
-    expect(screen.getByText('Dating Fatigue Risk')).toBeInTheDocument();
-    expect(screen.getByText(baseCompatibility.datingFatigueRisk)).toBeInTheDocument();
-  });
-
   it('omits coreFearInteraction when not present', () => {
     const compat = { ...baseCompatibility };
     delete compat.coreFearInteraction;

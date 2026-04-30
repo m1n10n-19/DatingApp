@@ -62,7 +62,7 @@ function makeValidPerson(overrides = {}) {
   return {
     name: 'Alice',
     gender: 'female',
-    answers: ['Answer one here', 'Answer two here', 'Answer three here', 'Answer four here', 'Answer five here'],
+    answers: ['Answer one here', 'Answer two here', 'Answer three here', 'Answer four here', 'Answer five here', 'Answer six here'],
     ...overrides,
   };
 }
@@ -258,14 +258,14 @@ describe('validatePerson', () => {
 
   it('rejects empty answer string', () => {
     const person = makeValidPerson({
-      answers: ['Answer', '', 'Answer', 'Answer', 'Answer'],
+      answers: ['Answer', '', 'Answer', 'Answer', 'Answer', 'Answer'],
     });
     expect(validatePerson(person, 'Person B')).toContain('answer 2');
   });
 
   it('rejects whitespace-only answer', () => {
     const person = makeValidPerson({
-      answers: ['   ', 'Answer', 'Answer', 'Answer', 'Answer'],
+      answers: ['   ', 'Answer', 'Answer', 'Answer', 'Answer', 'Answer'],
     });
     expect(validatePerson(person, 'Person A')).toContain('answer 1');
   });
@@ -540,12 +540,12 @@ describe('buildUserPayload', () => {
   const personA = {
     name: 'Alice',
     gender: 'female',
-    answers: ['ans1', 'ans2', 'ans3', 'ans4', 'ans5'],
+    answers: ['ans1', 'ans2', 'ans3', 'ans4', 'ans5', 'ans6'],
   };
   const personB = {
     name: 'Bob',
     gender: 'male',
-    answers: ['ans4', 'ans5', 'ans6', 'ans7', 'ans8'],
+    answers: ['ans4', 'ans5', 'ans6', 'ans7', 'ans8', 'ans9'],
   };
 
   it('includes both person names and genders', () => {
@@ -951,8 +951,12 @@ describe('validatePerson — hasRelationshipHistory', () => {
     expect(validatePerson(person, 'Person A')).toBeNull();
   });
 
-  it('accepts person with hasRelationshipHistory: false', () => {
-    const person = makeValidPerson({ hasRelationshipHistory: false });
+  it('accepts person with hasRelationshipHistory: false and correct answer count', () => {
+    // female + no history = 9 questions
+    const person = makeValidPerson({
+      hasRelationshipHistory: false,
+      answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'],
+    });
     expect(validatePerson(person, 'Person A')).toBeNull();
   });
 
@@ -966,7 +970,7 @@ describe('validatePerson — hasRelationshipHistory', () => {
     expect(validatePerson(person, 'Person A')).toContain('hasRelationshipHistory');
   });
 
-  it('accepts person with 9 answers (no history questionnaire)', () => {
+  it('accepts person with 9 answers (female, no history)', () => {
     const person = makeValidPerson({
       hasRelationshipHistory: false,
       answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'],
@@ -974,12 +978,21 @@ describe('validatePerson — hasRelationshipHistory', () => {
     expect(validatePerson(person, 'Person A')).toBeNull();
   });
 
-  it('accepts person with 8 answers (no history, no gendered Q6)', () => {
+  it('accepts person with 8 answers (non-binary, no history, no gendered Q6)', () => {
     const person = makeValidPerson({
+      gender: 'non-binary',
       hasRelationshipHistory: false,
       answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'],
     });
     expect(validatePerson(person, 'Person A')).toBeNull();
+  });
+
+  it('rejects mismatched answer count for gender/history combination', () => {
+    // female + history expects 6, but only 5 provided
+    const person = makeValidPerson({
+      answers: ['a1', 'a2', 'a3', 'a4', 'a5'],
+    });
+    expect(validatePerson(person, 'Person A')).toContain('exactly 6');
   });
 });
 
@@ -1030,22 +1043,22 @@ describe('normalizeResult — analyze (v5 nested fields)', () => {
 
 describe('buildUserPayload — hasRelationshipHistory', () => {
   it('includes hasRelationshipHistory: true by default', () => {
-    const personA = { name: 'Alice', gender: 'female', answers: ['a1', 'a2', 'a3', 'a4', 'a5'] };
-    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
+    const personA = { name: 'Alice', gender: 'female', answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'] };
+    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'] };
     const msg = buildUserPayload(personA, personB, 'new_match');
     expect(msg).toContain('hasRelationshipHistory: true');
   });
 
   it('includes hasRelationshipHistory: false when set', () => {
     const personA = { name: 'Alice', gender: 'female', hasRelationshipHistory: false, answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'] };
-    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
+    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'] };
     const msg = buildUserPayload(personA, personB, 'new_match');
     expect(msg).toContain('hasRelationshipHistory: false');
   });
 
   it('uses no-history Q4 text when hasRelationshipHistory is false', () => {
     const personA = { name: 'Alice', gender: 'female', hasRelationshipHistory: false, answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'] };
-    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
+    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'] };
     const msg = buildUserPayload(personA, personB, 'new_match');
     expect(msg).toContain("haven't been in a serious relationship");
   });
@@ -1067,16 +1080,24 @@ describe('POST /api/repair — individual repair', () => {
     expect(res.body.repair.realBreak).toBe('The real break.');
   });
 
-  it('sends individual mode in payload when only personA is provided', async () => {
+  it('sends individual mode in payload with questionsAndAnswers when only personA is provided', async () => {
     setMockLLMResponse(makeMockRepairResponse());
     const personA = makeValidPerson();
     await api('POST', '/api/repair', { personA });
 
-    // Check the LLM was called with mode: 'individual'
+    // Check the LLM was called with mode: 'individual' and question context
     const callArgs = mockCreate.mock.calls[0][0];
     const userPayload = JSON.parse(callArgs.messages[1].content);
     expect(userPayload.mode).toBe('individual');
     expect(userPayload.personB).toBeUndefined();
+    // Should include questionsAndAnswers instead of raw answers
+    expect(userPayload.personA.questionsAndAnswers).toBeDefined();
+    expect(Array.isArray(userPayload.personA.questionsAndAnswers)).toBe(true);
+    expect(userPayload.personA.questionsAndAnswers.length).toBe(6);
+    expect(userPayload.personA.questionsAndAnswers[0]).toHaveProperty('label');
+    expect(userPayload.personA.questionsAndAnswers[0]).toHaveProperty('question');
+    expect(userPayload.personA.questionsAndAnswers[0]).toHaveProperty('answer');
+    expect(userPayload.personA.answers).toBeUndefined();
   });
 
   it('pair repair still requires compatibility', async () => {

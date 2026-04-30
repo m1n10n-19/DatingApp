@@ -9,7 +9,6 @@ import {
   createInitialPerson,
   UNIVERSAL_QUESTIONS,
   GENDER_QUESTIONS,
-  getQuestionsForGender,
   getQuestions,
   NO_HISTORY_Q4,
   NO_HISTORY_EXTRA_QUESTIONS,
@@ -71,23 +70,6 @@ describe('shared questions module', () => {
         expect(q).toHaveProperty('text');
         expect(q).toHaveProperty('placeholder');
       });
-    });
-  });
-
-  describe('getQuestionsForGender (deprecated, backward compatible)', () => {
-    it('returns 5 questions for non-gendered user', () => {
-      const qs = getQuestionsForGender('other');
-      expect(qs).toHaveLength(5);
-    });
-
-    it('returns 6 questions for male', () => {
-      const qs = getQuestionsForGender('male');
-      expect(qs).toHaveLength(6);
-    });
-
-    it('returns 6 questions for female', () => {
-      const qs = getQuestionsForGender('female');
-      expect(qs).toHaveLength(6);
     });
   });
 
@@ -289,14 +271,11 @@ describe('shared questions module', () => {
   });
 
   describe('SAMPLE_PERSON_B', () => {
-    it('has hasRelationshipHistory: true', () => {
-      expect(SAMPLE_PERSON_B.hasRelationshipHistory).toBe(true);
-    });
-
     it('has the v2 profile shape', () => {
       expect(SAMPLE_PERSON_B).toHaveProperty('id');
       expect(SAMPLE_PERSON_B).toHaveProperty('answers');
       expect(SAMPLE_PERSON_B).toHaveProperty('schemaVersion', 2);
+      expect(SAMPLE_PERSON_B).toHaveProperty('hasRelationshipHistory', true);
       expect(SAMPLE_PERSON_B.answers).toHaveLength(6);
     });
   });

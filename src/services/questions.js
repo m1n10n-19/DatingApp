@@ -11,7 +11,6 @@ export {
   createInitialPerson,
   UNIVERSAL_QUESTIONS,
   GENDER_QUESTIONS,
-  getQuestionsForGender,
   getQuestions,
   NO_HISTORY_Q4,
   NO_HISTORY_EXTRA_QUESTIONS,

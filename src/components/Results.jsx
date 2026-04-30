@@ -5,7 +5,7 @@ import {
   Clock, Wrench, Shield, Eye, MessageCircle, Target,
   Activity, Timer, Lightbulb, XCircle, User,
 } from 'lucide-react';
-import ProfileCard from './ProfileCard';
+import ProfileCard, { LabeledField } from './ProfileCard';
 import CompatibilitySection from './CompatibilitySection';
 import { getTabButtonClasses } from '../utils/styles';
 
@@ -151,7 +151,6 @@ export default function Results({
                 {onRequestIndividualRepair && (
                   <IndividualRepairSection
                     person={person}
-                    personKey={key}
                     loading={individualRepairLoading === key}
                     error={individualRepairError?.key === key ? individualRepairError.message : null}
                     result={individualRepairResults[key]}
@@ -513,26 +512,17 @@ function IndividualRepairSection({ person, loading, error, result, onRequest, co
               </h4>
             </div>
 
-            {result.realBreak && (
-              <div className="mb-3">
-                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">The Real Break: </span>
-                <span className="text-text leading-relaxed text-sm">{result.realBreak}</span>
-              </div>
-            )}
-
-            {result.primaryMethod && (
-              <div className="mb-3">
-                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Primary Method: </span>
-                <span className="text-text leading-relaxed text-sm">{result.primaryMethod}</span>
-              </div>
-            )}
-
-            {result.practiceInstructions && (
-              <div className="mb-3">
-                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Practice: </span>
-                <span className="text-text leading-relaxed text-sm">{result.practiceInstructions}</span>
-              </div>
-            )}
+            {[
+              { label: 'The Real Break', key: 'realBreak' },
+              { label: 'Primary Method', key: 'primaryMethod' },
+              { label: 'Practice', key: 'practiceInstructions' },
+            ].map(({ label, key }) => (
+              result[key] ? (
+                <div key={key} className="mb-3">
+                  <LabeledField label={label} value={result[key]} />
+                </div>
+              ) : null
+            ))}
 
             {result.closingLine && (
               <div className="mt-4 pt-3 border-t border-surface-light/30 text-center">

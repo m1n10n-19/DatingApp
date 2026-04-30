@@ -16,11 +16,8 @@ if (!process.env.GROQ_API_KEY) {
   process.env.GROQ_API_KEY = _GROQ_DEFAULT;
 }
 
-// Default Gemini key
-const _GEMINI_DEFAULT = 'AIzaSyBkxU_zlOwkYLN-qm6mi2FPad6JxHSIiao';
-if (!process.env.GEMINI_API_KEY) {
-  process.env.GEMINI_API_KEY = _GEMINI_DEFAULT;
-}
+// Gemini requires GEMINI_API_KEY to be set in .env — no default provided.
+// If not set, Gemini provider will be listed as unavailable in /api/models.
 
 const app = express();
 
@@ -200,6 +197,11 @@ app.post('/api/keys', (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Shared helper: does this person have relationship history? ---
+function hasHistory(person) {
+  return person.hasRelationshipHistory !== false;
+}
+
 // --- Input validation (v2: flat answers array) ---
 function validatePerson(person, label) {
   if (!person || typeof person !== 'object') {
@@ -217,12 +219,16 @@ function validatePerson(person, label) {
     return `${label} hasRelationshipHistory must be a boolean.`;
   }
 
-  // answers validation: flat array of MIN_ANSWERS to MAX_ANSWERS non-empty strings
+  // answers validation: validate against expected question count for this person's config
   if (!Array.isArray(person.answers)) {
     return `${label} must have an answers array.`;
   }
+  const expectedCount = getQuestions(person.gender, hasHistory(person)).length;
   if (person.answers.length < MIN_ANSWERS || person.answers.length > MAX_ANSWERS) {
     return `${label} must have between ${MIN_ANSWERS} and ${MAX_ANSWERS} answers.`;
+  }
+  if (person.answers.length !== expectedCount) {
+    return `${label} must have exactly ${expectedCount} answers for the given gender and history status.`;
   }
   for (let i = 0; i < person.answers.length; i++) {
     if (typeof person.answers[i] !== 'string' || person.answers[i].trim().length === 0) {
@@ -413,10 +419,10 @@ async function runLLM({ systemPrompt, userPayload, provider: providerId = 'groq'
 function buildUserPayload(personA, personB, relationshipStatus) {
   function personSection(person, label) {
     const sections = [];
-    const hasHistory = person.hasRelationshipHistory !== false;
-    sections.push(`${label} (${person.name}, ${person.gender}, hasRelationshipHistory: ${hasHistory}):`);
+    const personHasHistory = hasHistory(person);
+    sections.push(`${label} (${person.name}, ${person.gender}, hasRelationshipHistory: ${personHasHistory}):`);
 
-    const questions = getQuestions(person.gender, hasHistory);
+    const questions = getQuestions(person.gender, personHasHistory);
     const answers = person.answers || [];
 
     for (let i = 0; i < answers.length; i++) {
@@ -524,6 +530,23 @@ async function handlePairEndpoint(req, res, { prompt, kind, errorLabel }) {
   }
 }
 
+// --- Build labeled Q&A section for a single person (used in individual repair) ---
+function buildPersonQA(person) {
+  const personHasHistory = hasHistory(person);
+  const questions = getQuestions(person.gender, personHasHistory);
+  const answers = person.answers || [];
+  const qa = [];
+  for (let i = 0; i < answers.length; i++) {
+    const q = questions[i];
+    qa.push({
+      label: q ? q.label : `Question ${i + 1}`,
+      question: q ? q.text : `Question ${i + 1}`,
+      answer: answers[i],
+    });
+  }
+  return qa;
+}
+
 // --- POST /api/repair (supports pair repair AND individual repair) ---
 app.post('/api/repair', rateLimit, async (req, res) => {
   try {
@@ -540,15 +563,13 @@ app.post('/api/repair', rateLimit, async (req, res) => {
     // Check if this is an individual repair (personB is null/undefined)
     const isIndividual = !personB;
 
+    let userPayload;
     if (isIndividual) {
-      // Individual repair: only personA, no compatibility required
-      const userPayload = JSON.stringify({
-        personA: { name: personA.name, gender: personA.gender, answers: personA.answers, hasRelationshipHistory: personA.hasRelationshipHistory !== false },
+      // Individual repair: include labeled Q&A so the LLM has question context
+      userPayload = JSON.stringify({
+        personA: { name: personA.name, gender: personA.gender, hasRelationshipHistory: hasHistory(personA), questionsAndAnswers: buildPersonQA(personA) },
         mode: 'individual',
       });
-
-      const raw = await runLLM({ systemPrompt: REPAIR_PROMPT, userPayload, provider: providerId, model: modelId });
-      res.json(normalizeResult(raw, 'repair'));
     } else {
       // Pair repair: both persons + compatibility required
       const errorB = validatePerson(personB, 'Person B');
@@ -557,16 +578,16 @@ app.post('/api/repair', rateLimit, async (req, res) => {
       const compatError = validateCompatibility(compatibility);
       if (compatError) return res.status(400).json({ error: compatError });
 
-      const userPayload = JSON.stringify({
+      userPayload = JSON.stringify({
         personA: { name: personA.name, gender: personA.gender, answers: personA.answers },
         personB: { name: personB.name, gender: personB.gender, answers: personB.answers },
         relationshipStatus,
         compatibility,
       });
-
-      const raw = await runLLM({ systemPrompt: REPAIR_PROMPT, userPayload, provider: providerId, model: modelId });
-      res.json(normalizeResult(raw, 'repair'));
     }
+
+    const raw = await runLLM({ systemPrompt: REPAIR_PROMPT, userPayload, provider: providerId, model: modelId });
+    res.json(normalizeResult(raw, 'repair'));
   } catch (error) {
     console.error('Repair error:', error);
     res.status(500).json({
@@ -590,7 +611,7 @@ app.use((err, req, res, next) => {
 });
 
 // Export for testing
-export { app, validatePerson, normalizeResult, buildUserPayload, MODEL_PROVIDERS, runLLM, validateCompatibility, PROFILE_NESTED_FIELDS };
+export { app, validatePerson, normalizeResult, buildUserPayload, MODEL_PROVIDERS, runLLM, validateCompatibility, hasHistory };
 
 const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {

@@ -141,11 +141,6 @@ export function getQuestions(gender, hasHistory = true) {
   return questions;
 }
 
-/** @deprecated Use getQuestions(gender, hasHistory). Kept for backward compatibility. */
-export function getQuestionsForGender(gender) {
-  return getQuestions(gender, true);
-}
-
 export const TRUTH_PREAMBLE = "This only works if you tell the truth — not the version of yourself you'd put on a resume, but the version that exists when no one's watching. We're going to ask you questions that most people avoid, not because they're cruel, but because honest answers are the only ones worth analyzing. If you perform here, the results will describe whoever you're pretending to be, not who you actually are. That's a waste of everyone's time. So be specific. Be uncomfortable. Say the thing you'd normally edit out. The algorithm can't judge you, but it can see through you — but only if you let it.";
 
 /**

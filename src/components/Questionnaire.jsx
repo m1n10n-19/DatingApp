@@ -207,28 +207,20 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
                     Have you been in a serious relationship before?
                   </label>
                   <div className="flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setHasHistory(true)}
-                      className={`flex-1 px-5 py-3 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
-                        hasHistory
-                          ? 'border-accent bg-accent/10 text-accent'
-                          : 'border-surface-light bg-surface/60 text-text-dim hover:bg-surface-light'
-                      }`}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHasHistory(false)}
-                      className={`flex-1 px-5 py-3 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
-                        !hasHistory
-                          ? 'border-accent bg-accent/10 text-accent'
-                          : 'border-surface-light bg-surface/60 text-text-dim hover:bg-surface-light'
-                      }`}
-                    >
-                      No
-                    </button>
+                    {[{ label: 'Yes', value: true }, { label: 'No', value: false }].map(({ label, value }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setHasHistory(value)}
+                        className={`flex-1 px-5 py-3 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
+                          hasHistory === value
+                            ? 'border-accent bg-accent/10 text-accent'
+                            : 'border-surface-light bg-surface/60 text-text-dim hover:bg-surface-light'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

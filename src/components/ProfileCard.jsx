@@ -11,6 +11,42 @@ const sectionConfig = [
   { key: 'growthEdge', label: 'Growth Edge', icon: Sprout },
 ];
 
+/* Shared label + value renderer used in ProfileCard and exported for Results */
+export function LabeledField({ label, value, labelColorClass = 'text-text-dim' }) {
+  if (!value) return null;
+  return (
+    <div>
+      <span className={`text-xs font-semibold ${labelColorClass} uppercase tracking-wide`}>{label}: </span>
+      <span className="text-text leading-relaxed text-sm">{value}</span>
+    </div>
+  );
+}
+
+/* Renders a nested-field section (e.g. Core Fear, Red Flags) with an icon/heading and sub-fields */
+function NestedFieldSection({ data, title, Icon, fields, delay, containerClass, iconClass, headingClass, labelColorClass }) {
+  if (!data) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className={containerClass}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Icon className={`w-4 h-4 ${iconClass}`} />
+        <h3 className={`text-sm font-medium ${headingClass} uppercase tracking-wide`}>
+          {title}
+        </h3>
+      </div>
+      <div className="space-y-3">
+        {fields.map(({ label, key }) => (
+          <LabeledField key={key} label={label} value={data[key]} labelColorClass={labelColorClass} />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 export default function ProfileCard({ profile, color }) {
   const colorClasses = {
     accent: {
@@ -79,72 +115,37 @@ export default function ProfileCard({ profile, color }) {
       })}
 
       {/* Core Fear */}
-      {profile.coreFear && (
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: (sectionConfig.length + 1) * 0.1 }}
-          className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldAlert className={`w-4 h-4 ${colors.text}`} />
-            <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
-              Core Fear
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {profile.coreFear.primary && (
-              <div>
-                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Primary: </span>
-                <span className="text-text leading-relaxed text-sm">{profile.coreFear.primary}</span>
-              </div>
-            )}
-            {profile.coreFear.secondary && (
-              <div>
-                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Secondary: </span>
-                <span className="text-text leading-relaxed text-sm">{profile.coreFear.secondary}</span>
-              </div>
-            )}
-            {profile.coreFear.interaction && (
-              <div>
-                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Interaction: </span>
-                <span className="text-text leading-relaxed text-sm">{profile.coreFear.interaction}</span>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
+      <NestedFieldSection
+        data={profile.coreFear}
+        title="Core Fear"
+        Icon={ShieldAlert}
+        fields={[
+          { label: 'Primary', key: 'primary' },
+          { label: 'Secondary', key: 'secondary' },
+          { label: 'Interaction', key: 'interaction' },
+        ]}
+        delay={(sectionConfig.length + 1) * 0.1}
+        containerClass="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
+        iconClass={colors.text}
+        headingClass="text-text-dim"
+        labelColorClass="text-text-dim"
+      />
 
       {/* Red Flags */}
-      {profile.redFlags && (
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: (sectionConfig.length + 2) * 0.1 }}
-          className="mb-6 p-6 rounded-2xl bg-rose/5 border border-rose/20 hover:border-rose/40 transition-all duration-300"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Flag className="w-4 h-4 text-rose" />
-            <h3 className="text-sm font-medium text-rose uppercase tracking-wide">
-              Red Flags
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {profile.redFlags.inThemselves && (
-              <div>
-                <span className="text-xs font-semibold text-rose uppercase tracking-wide">In Themselves: </span>
-                <span className="text-text leading-relaxed text-sm">{profile.redFlags.inThemselves}</span>
-              </div>
-            )}
-            {profile.redFlags.inOthers && (
-              <div>
-                <span className="text-xs font-semibold text-rose uppercase tracking-wide">In Others: </span>
-                <span className="text-text leading-relaxed text-sm">{profile.redFlags.inOthers}</span>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
+      <NestedFieldSection
+        data={profile.redFlags}
+        title="Red Flags"
+        Icon={Flag}
+        fields={[
+          { label: 'In Themselves', key: 'inThemselves' },
+          { label: 'In Others', key: 'inOthers' },
+        ]}
+        delay={(sectionConfig.length + 2) * 0.1}
+        containerClass="mb-6 p-6 rounded-2xl bg-rose/5 border border-rose/20 hover:border-rose/40 transition-all duration-300"
+        iconClass="text-rose"
+        headingClass="text-rose"
+        labelColorClass="text-rose"
+      />
 
       {/* Closing Line */}
       {profile.closingLine && (
