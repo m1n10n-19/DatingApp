@@ -29,6 +29,8 @@ export default function App() {
   const [repairError, setRepairError] = useState(null);
   const [simulateLoading, setSimulateLoading] = useState(false);
   const [simulateError, setSimulateError] = useState(null);
+  const [individualRepairLoading, setIndividualRepairLoading] = useState(null);
+  const [individualRepairError, setIndividualRepairError] = useState(null);
 
   // --- Handlers ---
 
@@ -205,6 +207,48 @@ export default function App() {
   const handleRequestSimulate = () =>
     fetchPairEndpoint('/api/simulate', 'simulation', setSimulateLoading, setSimulateError, 'Simulation failed. Please try again.');
 
+  const handleRequestIndividualRepair = async (person, personKey, onResult) => {
+    setIndividualRepairLoading(personKey);
+    setIndividualRepairError(null);
+    try {
+      const response = await fetch('/api/repair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personA: person,
+          relationshipStatus: relationshipStatus,
+          provider,
+          model,
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Individual repair generation failed. Please try again.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.details || errData.error || errorMessage;
+        } catch {
+          // Response body wasn't valid JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      onResult(data.repair);
+    } catch (err) {
+      console.error('Individual repair error:', err);
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      setIndividualRepairError({
+        key: personKey,
+        message: isNetworkError
+          ? 'Unable to connect to the server. Please ensure the backend is running.'
+          : err.message,
+      });
+    } finally {
+      setIndividualRepairLoading(null);
+    }
+  };
+
   const handleReset = () => {
     setView(VIEWS.LANDING);
     setPersonA(null);
@@ -219,6 +263,8 @@ export default function App() {
     setRepairError(null);
     setSimulateLoading(false);
     setSimulateError(null);
+    setIndividualRepairLoading(null);
+    setIndividualRepairError(null);
   };
 
   const handleModelChange = (newProvider, newModel) => {
@@ -305,8 +351,11 @@ export default function App() {
           repairError={repairError}
           simulateLoading={simulateLoading}
           simulateError={simulateError}
+          individualRepairLoading={individualRepairLoading}
+          individualRepairError={individualRepairError}
           onRequestRepair={handleRequestRepair}
           onRequestSimulate={handleRequestSimulate}
+          onRequestIndividualRepair={handleRequestIndividualRepair}
         />
       )}
     </div>

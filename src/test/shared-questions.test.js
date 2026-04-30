@@ -7,10 +7,173 @@ import {
   TRUTH_PREAMBLE,
   INITIAL_PERSON,
   createInitialPerson,
+  UNIVERSAL_QUESTIONS,
+  GENDER_QUESTIONS,
+  getQuestionsForGender,
+  getQuestions,
+  NO_HISTORY_Q4,
+  NO_HISTORY_EXTRA_QUESTIONS,
+  MIN_ANSWERS,
+  MAX_ANSWERS,
 } from '../services/questions';
-import { SAMPLE_PERSON_A } from '../services/sampleData';
+import { SAMPLE_PERSON_A, SAMPLE_PERSON_B } from '../services/sampleData';
 
 describe('shared questions module', () => {
+  describe('UNIVERSAL_QUESTIONS', () => {
+    it('has exactly 5 universal questions', () => {
+      expect(UNIVERSAL_QUESTIONS).toHaveLength(5);
+    });
+
+    it('each has id, layer, label, text, placeholder', () => {
+      UNIVERSAL_QUESTIONS.forEach((q) => {
+        expect(q).toHaveProperty('id');
+        expect(q).toHaveProperty('layer');
+        expect(q).toHaveProperty('label');
+        expect(q).toHaveProperty('text');
+        expect(q).toHaveProperty('placeholder');
+      });
+    });
+  });
+
+  describe('GENDER_QUESTIONS', () => {
+    it('has male and female variants', () => {
+      expect(GENDER_QUESTIONS.male).toBeDefined();
+      expect(GENDER_QUESTIONS.female).toBeDefined();
+      expect(GENDER_QUESTIONS.male.id).toBe(6);
+      expect(GENDER_QUESTIONS.female.id).toBe(6);
+    });
+  });
+
+  describe('NO_HISTORY_Q4', () => {
+    it('is a valid question object with id 4', () => {
+      expect(NO_HISTORY_Q4.id).toBe(4);
+      expect(NO_HISTORY_Q4.layer).toBe('Template');
+      expect(NO_HISTORY_Q4.text).toContain("haven't been in a serious relationship");
+    });
+  });
+
+  describe('NO_HISTORY_EXTRA_QUESTIONS', () => {
+    it('has exactly 3 extra questions (Q7-Q9)', () => {
+      expect(NO_HISTORY_EXTRA_QUESTIONS).toHaveLength(3);
+    });
+
+    it('has ids 7, 8, 9', () => {
+      expect(NO_HISTORY_EXTRA_QUESTIONS[0].id).toBe(7);
+      expect(NO_HISTORY_EXTRA_QUESTIONS[1].id).toBe(8);
+      expect(NO_HISTORY_EXTRA_QUESTIONS[2].id).toBe(9);
+    });
+
+    it('each has id, layer, label, text, placeholder', () => {
+      NO_HISTORY_EXTRA_QUESTIONS.forEach((q) => {
+        expect(q).toHaveProperty('id');
+        expect(q).toHaveProperty('layer');
+        expect(q).toHaveProperty('label');
+        expect(q).toHaveProperty('text');
+        expect(q).toHaveProperty('placeholder');
+      });
+    });
+  });
+
+  describe('getQuestionsForGender (deprecated, backward compatible)', () => {
+    it('returns 5 questions for non-gendered user', () => {
+      const qs = getQuestionsForGender('other');
+      expect(qs).toHaveLength(5);
+    });
+
+    it('returns 6 questions for male', () => {
+      const qs = getQuestionsForGender('male');
+      expect(qs).toHaveLength(6);
+    });
+
+    it('returns 6 questions for female', () => {
+      const qs = getQuestionsForGender('female');
+      expect(qs).toHaveLength(6);
+    });
+  });
+
+  describe('getQuestions', () => {
+    describe('with history (default)', () => {
+      it('returns 5 questions for non-gendered user', () => {
+        const qs = getQuestions('other', true);
+        expect(qs).toHaveLength(5);
+      });
+
+      it('returns 6 questions for male', () => {
+        const qs = getQuestions('male', true);
+        expect(qs).toHaveLength(6);
+      });
+
+      it('returns 6 questions for female', () => {
+        const qs = getQuestions('female');
+        expect(qs).toHaveLength(6);
+      });
+
+      it('uses original Q4 (Template)', () => {
+        const qs = getQuestions('female', true);
+        expect(qs[3].text).toContain('What did love look like in the home you grew up in');
+      });
+
+      it('does not include extra questions Q7-Q9', () => {
+        const qs = getQuestions('female', true);
+        expect(qs.length).toBeLessThanOrEqual(6);
+        expect(qs.some((q) => q.id === 7)).toBe(false);
+      });
+    });
+
+    describe('without history (hasHistory = false)', () => {
+      it('returns 8 questions for non-gendered user', () => {
+        const qs = getQuestions('other', false);
+        expect(qs).toHaveLength(8);
+      });
+
+      it('returns 9 questions for male', () => {
+        const qs = getQuestions('male', false);
+        expect(qs).toHaveLength(9);
+      });
+
+      it('returns 9 questions for female', () => {
+        const qs = getQuestions('female', false);
+        expect(qs).toHaveLength(9);
+      });
+
+      it('uses No History Q4 replacement', () => {
+        const qs = getQuestions('female', false);
+        expect(qs[3].text).toContain("haven't been in a serious relationship");
+      });
+
+      it('includes gendered Q6 in position 5', () => {
+        const qs = getQuestions('male', false);
+        expect(qs[5].id).toBe(6);
+        expect(qs[5].layer).toBe('Gendered');
+      });
+
+      it('includes Q7, Q8, Q9 after gendered Q6', () => {
+        const qs = getQuestions('female', false);
+        expect(qs[6].id).toBe(7);
+        expect(qs[7].id).toBe(8);
+        expect(qs[8].id).toBe(9);
+      });
+
+      it('retains Q1, Q2, Q3, Q5 from universal', () => {
+        const qs = getQuestions('female', false);
+        expect(qs[0].id).toBe(1);
+        expect(qs[1].id).toBe(2);
+        expect(qs[2].id).toBe(3);
+        expect(qs[4].id).toBe(5);
+      });
+    });
+  });
+
+  describe('MIN_ANSWERS and MAX_ANSWERS', () => {
+    it('MIN_ANSWERS is 5', () => {
+      expect(MIN_ANSWERS).toBe(5);
+    });
+
+    it('MAX_ANSWERS is 9 (accommodates no-history questionnaire)', () => {
+      expect(MAX_ANSWERS).toBe(9);
+    });
+  });
+
   describe('QUESTIONS (legacy re-export)', () => {
     it('exports a non-empty array', () => {
       expect(Array.isArray(QUESTIONS)).toBe(true);
@@ -22,8 +185,8 @@ describe('shared questions module', () => {
     });
   });
 
-  describe('CORE_QUESTIONS', () => {
-    it('has exactly 3 questions with correct shape', () => {
+  describe('CORE_QUESTIONS (legacy)', () => {
+    it('has exactly 3 questions with module "core"', () => {
       expect(CORE_QUESTIONS).toHaveLength(3);
       CORE_QUESTIONS.forEach((q) => {
         expect(q).toHaveProperty('id');
@@ -40,43 +203,48 @@ describe('shared questions module', () => {
       expect(INITIAL_PERSON.gender).toBe('');
     });
 
-    it('has moduleAnswers.core array of length 3 with empty strings', () => {
-      expect(INITIAL_PERSON.moduleAnswers.core).toHaveLength(3);
-      INITIAL_PERSON.moduleAnswers.core.forEach((a) => expect(a).toBe(''));
+    it('has answers array of length 6 with empty strings', () => {
+      expect(INITIAL_PERSON.answers).toHaveLength(6);
+      for (const a of INITIAL_PERSON.answers) {
+        expect(a).toBe('');
+      }
+    });
+
+    it('has hasRelationshipHistory defaulting to true', () => {
+      expect(INITIAL_PERSON.hasRelationshipHistory).toBe(true);
     });
 
     it('is frozen (immutable)', () => {
       expect(Object.isFrozen(INITIAL_PERSON)).toBe(true);
     });
 
-    it('has schemaVersion 1 and null createdAt', () => {
-      expect(INITIAL_PERSON.schemaVersion).toBe(1);
+    it('has schemaVersion 2 and null createdAt', () => {
+      expect(INITIAL_PERSON.schemaVersion).toBe(2);
       expect(INITIAL_PERSON.createdAt).toBeNull();
     });
   });
 
   describe('createInitialPerson', () => {
-    it('returns an object with correct shape', () => {
+    it('returns an object with correct v2 shape', () => {
       const person = createInitialPerson();
       expect(person.name).toBe('');
       expect(person.gender).toBe('');
-      expect(person.moduleAnswers.core).toEqual(['', '', '']);
-      expect(person.enabledModules).toEqual([]);
-      expect(person.schemaVersion).toBe(1);
+      expect(person.answers).toEqual(['', '', '', '', '', '']);
+      expect(person.hasRelationshipHistory).toBe(true);
+      expect(person.schemaVersion).toBe(2);
     });
 
     it('returns a new object each time (no shared reference)', () => {
       const a = createInitialPerson();
       const b = createInitialPerson();
       expect(a).not.toBe(b);
-      expect(a.moduleAnswers).not.toBe(b.moduleAnswers);
-      expect(a.moduleAnswers.core).not.toBe(b.moduleAnswers.core);
+      expect(a.answers).not.toBe(b.answers);
     });
 
-    it('returned moduleAnswers.core array is mutable', () => {
+    it('returned answers array is mutable', () => {
       const person = createInitialPerson();
-      person.moduleAnswers.core[0] = 'test';
-      expect(person.moduleAnswers.core[0]).toBe('test');
+      person.answers[0] = 'test';
+      expect(person.answers[0]).toBe('test');
     });
 
     it('returns unique id each call', () => {
@@ -88,46 +256,15 @@ describe('shared questions module', () => {
     });
   });
 
-  describe('MODULE_DEFS', () => {
-    it('exports an array of 5 entries with correct shape', () => {
+  describe('Legacy deprecation re-exports', () => {
+    it('MODULE_DEFS is an empty array', () => {
       expect(Array.isArray(MODULE_DEFS)).toBe(true);
-      expect(MODULE_DEFS).toHaveLength(5);
-      MODULE_DEFS.forEach((m) => {
-        expect(m).toHaveProperty('key');
-        expect(m).toHaveProperty('label');
-        expect(m).toHaveProperty('required');
-        expect(m).toHaveProperty('count');
-        expect(typeof m.key).toBe('string');
-        expect(typeof m.label).toBe('string');
-        expect(typeof m.required).toBe('boolean');
-        expect(typeof m.count).toBe('number');
-      });
+      expect(MODULE_DEFS).toHaveLength(0);
     });
 
-    it('core is required, others are not', () => {
-      const core = MODULE_DEFS.find((m) => m.key === 'core');
-      expect(core.required).toBe(true);
-      MODULE_DEFS.filter((m) => m.key !== 'core').forEach((m) => {
-        expect(m.required).toBe(false);
-      });
-    });
-  });
-
-  describe('CONTRADICTION_PAIRS', () => {
-    it('has 3 entries each with first and second', () => {
-      expect(CONTRADICTION_PAIRS).toHaveLength(3);
-      CONTRADICTION_PAIRS.forEach((pair) => {
-        expect(pair).toHaveProperty('pairId');
-        expect(pair).toHaveProperty('first');
-        expect(pair).toHaveProperty('second');
-        expect(pair).toHaveProperty('module', 'contradictions');
-        expect(pair.first).toHaveProperty('id');
-        expect(pair.first).toHaveProperty('text');
-        expect(pair.first).toHaveProperty('placeholder');
-        expect(pair.second).toHaveProperty('id');
-        expect(pair.second).toHaveProperty('text');
-        expect(pair.second).toHaveProperty('placeholder');
-      });
+    it('CONTRADICTION_PAIRS is an empty array', () => {
+      expect(Array.isArray(CONTRADICTION_PAIRS)).toBe(true);
+      expect(CONTRADICTION_PAIRS).toHaveLength(0);
     });
   });
 
@@ -138,26 +275,29 @@ describe('shared questions module', () => {
     });
   });
 
-  describe('INITIAL_PERSON.moduleAnswers.core', () => {
-    it('has length 3', () => {
-      expect(INITIAL_PERSON.moduleAnswers.core).toHaveLength(3);
+  describe('SAMPLE_PERSON_A', () => {
+    it('has the v2 profile shape', () => {
+      expect(SAMPLE_PERSON_A).toHaveProperty('id');
+      expect(SAMPLE_PERSON_A).toHaveProperty('name');
+      expect(SAMPLE_PERSON_A).toHaveProperty('gender');
+      expect(SAMPLE_PERSON_A).toHaveProperty('answers');
+      expect(SAMPLE_PERSON_A).toHaveProperty('hasRelationshipHistory', true);
+      expect(SAMPLE_PERSON_A).toHaveProperty('schemaVersion', 2);
+      expect(SAMPLE_PERSON_A).toHaveProperty('createdAt');
+      expect(SAMPLE_PERSON_A.answers).toHaveLength(6);
     });
   });
 
-  describe('SAMPLE_PERSON_A', () => {
-    it('has moduleAnswers.kokology of length 4', () => {
-      expect(SAMPLE_PERSON_A.moduleAnswers.kokology).toHaveLength(4);
+  describe('SAMPLE_PERSON_B', () => {
+    it('has hasRelationshipHistory: true', () => {
+      expect(SAMPLE_PERSON_B.hasRelationshipHistory).toBe(true);
     });
 
-    it('has the new profile shape', () => {
-      expect(SAMPLE_PERSON_A).toHaveProperty('id');
-      expect(SAMPLE_PERSON_A).toHaveProperty('enabledModules');
-      expect(SAMPLE_PERSON_A).toHaveProperty('moduleAnswers');
-      expect(SAMPLE_PERSON_A).toHaveProperty('schemaVersion', 1);
-      expect(SAMPLE_PERSON_A).toHaveProperty('createdAt');
-      expect(SAMPLE_PERSON_A.moduleAnswers.core).toHaveLength(3);
-      expect(SAMPLE_PERSON_A.moduleAnswers.shadow).toHaveLength(3);
-      expect(SAMPLE_PERSON_A.moduleAnswers.desire).toHaveLength(2);
+    it('has the v2 profile shape', () => {
+      expect(SAMPLE_PERSON_B).toHaveProperty('id');
+      expect(SAMPLE_PERSON_B).toHaveProperty('answers');
+      expect(SAMPLE_PERSON_B).toHaveProperty('schemaVersion', 2);
+      expect(SAMPLE_PERSON_B.answers).toHaveLength(6);
     });
   });
 });

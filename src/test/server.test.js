@@ -86,6 +86,15 @@ function makeMockAnalyzeResponse() {
       complementProfile: 'Needs warmth.',
       likelyMistake: 'Picks builders.',
       growthEdge: 'Learn to receive.',
+      coreFear: {
+        primary: 'Fear of being seen as incompetent.',
+        secondary: 'Fear of emotional dependency.',
+        interaction: 'These fears reinforce each other.',
+      },
+      redFlags: {
+        inThemselves: 'Emotional withdrawal under stress.',
+        inOthers: 'Blind to controlling behavior.',
+      },
       closingLine: 'He builds walls to feel safe.',
     },
     personB: {
@@ -96,6 +105,15 @@ function makeMockAnalyzeResponse() {
       complementProfile: 'Needs structure.',
       likelyMistake: 'Picks intensity.',
       growthEdge: 'Learn to stay.',
+      coreFear: {
+        primary: 'Fear of abandonment.',
+        secondary: 'Fear of being ordinary.',
+        interaction: 'These fears create a performance loop.',
+      },
+      redFlags: {
+        inThemselves: 'Over-functioning to maintain connection.',
+        inOthers: 'Rationalizes emotional unavailability.',
+      },
       closingLine: 'She burns through people looking for home.',
     },
     compatibility: {
@@ -108,6 +126,8 @@ function makeMockAnalyzeResponse() {
       earlyWarnings: ['Sign 1', 'Sign 2', 'Sign 3'],
       shadowCollision: 'Their shadows collide here.',
       repairLever: 'The one thing to fix.',
+      coreFearInteraction: 'His fear of incompetence triggers her fear of abandonment.',
+      datingFatigueRisk: 'Moderate risk from accumulated dating exhaustion.',
       closingLine: 'The truth.',
     },
   };
@@ -176,6 +196,8 @@ function makeCompatibility() {
     earlyWarnings: ['Sign 1', 'Sign 2', 'Sign 3'],
     shadowCollision: 'Shadows collide.',
     repairLever: 'Fix this.',
+    coreFearInteraction: 'Their fears interact.',
+    datingFatigueRisk: 'Low risk.',
     closingLine: 'The truth.',
   };
 }
@@ -229,9 +251,9 @@ describe('validatePerson', () => {
     expect(validatePerson(person, 'Person A')).toContain('5');
   });
 
-  it('rejects too many answers (more than 6)', () => {
-    const person = makeValidPerson({ answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] });
-    expect(validatePerson(person, 'Person A')).toContain('6');
+  it('rejects too many answers (more than 9)', () => {
+    const person = makeValidPerson({ answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'] });
+    expect(validatePerson(person, 'Person A')).toContain('9');
   });
 
   it('rejects empty answer string', () => {
@@ -917,6 +939,162 @@ describe('Rate limiting on new endpoints', () => {
     const personA = makeValidPerson();
     const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
     const res = await api('POST', '/api/simulate', { personA, personB, relationshipStatus: 'new_match' });
+    expect(res.status).toBe(400);
+  });
+});
+
+// --- v5 New Feature Tests ---
+
+describe('validatePerson — hasRelationshipHistory', () => {
+  it('accepts person with hasRelationshipHistory: true', () => {
+    const person = makeValidPerson({ hasRelationshipHistory: true });
+    expect(validatePerson(person, 'Person A')).toBeNull();
+  });
+
+  it('accepts person with hasRelationshipHistory: false', () => {
+    const person = makeValidPerson({ hasRelationshipHistory: false });
+    expect(validatePerson(person, 'Person A')).toBeNull();
+  });
+
+  it('accepts person without hasRelationshipHistory (defaults to true)', () => {
+    const person = makeValidPerson();
+    expect(validatePerson(person, 'Person A')).toBeNull();
+  });
+
+  it('rejects non-boolean hasRelationshipHistory', () => {
+    const person = makeValidPerson({ hasRelationshipHistory: 'yes' });
+    expect(validatePerson(person, 'Person A')).toContain('hasRelationshipHistory');
+  });
+
+  it('accepts person with 9 answers (no history questionnaire)', () => {
+    const person = makeValidPerson({
+      hasRelationshipHistory: false,
+      answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'],
+    });
+    expect(validatePerson(person, 'Person A')).toBeNull();
+  });
+
+  it('accepts person with 8 answers (no history, no gendered Q6)', () => {
+    const person = makeValidPerson({
+      hasRelationshipHistory: false,
+      answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'],
+    });
+    expect(validatePerson(person, 'Person A')).toBeNull();
+  });
+});
+
+describe('normalizeResult — analyze (v5 nested fields)', () => {
+  it('normalizes coreFear and redFlags for each person', () => {
+    const result = normalizeResult(makeMockAnalyzeResponse(), 'analyze');
+    expect(result.personA.coreFear.primary).toBe('Fear of being seen as incompetent.');
+    expect(result.personA.coreFear.secondary).toBe('Fear of emotional dependency.');
+    expect(result.personA.coreFear.interaction).toBe('These fears reinforce each other.');
+    expect(result.personA.redFlags.inThemselves).toBe('Emotional withdrawal under stress.');
+    expect(result.personA.redFlags.inOthers).toBe('Blind to controlling behavior.');
+
+    expect(result.personB.coreFear.primary).toBe('Fear of abandonment.');
+    expect(result.personB.redFlags.inThemselves).toBe('Over-functioning to maintain connection.');
+  });
+
+  it('defaults missing coreFear and redFlags to empty strings', () => {
+    const result = normalizeResult({ personA: {}, personB: {}, compatibility: {} }, 'analyze');
+    expect(result.personA.coreFear).toEqual({ primary: '', secondary: '', interaction: '' });
+    expect(result.personA.redFlags).toEqual({ inThemselves: '', inOthers: '' });
+    expect(result.personB.coreFear).toEqual({ primary: '', secondary: '', interaction: '' });
+    expect(result.personB.redFlags).toEqual({ inThemselves: '', inOthers: '' });
+  });
+
+  it('coerces non-string nested fields to empty strings', () => {
+    const result = normalizeResult({
+      personA: { coreFear: { primary: 42, secondary: null }, redFlags: { inThemselves: true } },
+      personB: {},
+      compatibility: {},
+    }, 'analyze');
+    expect(result.personA.coreFear.primary).toBe('');
+    expect(result.personA.coreFear.secondary).toBe('');
+    expect(result.personA.redFlags.inThemselves).toBe('');
+  });
+
+  it('normalizes coreFearInteraction and datingFatigueRisk in compatibility', () => {
+    const result = normalizeResult(makeMockAnalyzeResponse(), 'analyze');
+    expect(result.compatibility.coreFearInteraction).toBe('His fear of incompetence triggers her fear of abandonment.');
+    expect(result.compatibility.datingFatigueRisk).toBe('Moderate risk from accumulated dating exhaustion.');
+  });
+
+  it('defaults missing compatibility v5 fields to empty strings', () => {
+    const result = normalizeResult({ personA: {}, personB: {}, compatibility: {} }, 'analyze');
+    expect(result.compatibility.coreFearInteraction).toBe('');
+    expect(result.compatibility.datingFatigueRisk).toBe('');
+  });
+});
+
+describe('buildUserPayload — hasRelationshipHistory', () => {
+  it('includes hasRelationshipHistory: true by default', () => {
+    const personA = { name: 'Alice', gender: 'female', answers: ['a1', 'a2', 'a3', 'a4', 'a5'] };
+    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
+    const msg = buildUserPayload(personA, personB, 'new_match');
+    expect(msg).toContain('hasRelationshipHistory: true');
+  });
+
+  it('includes hasRelationshipHistory: false when set', () => {
+    const personA = { name: 'Alice', gender: 'female', hasRelationshipHistory: false, answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'] };
+    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
+    const msg = buildUserPayload(personA, personB, 'new_match');
+    expect(msg).toContain('hasRelationshipHistory: false');
+  });
+
+  it('uses no-history Q4 text when hasRelationshipHistory is false', () => {
+    const personA = { name: 'Alice', gender: 'female', hasRelationshipHistory: false, answers: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9'] };
+    const personB = { name: 'Bob', gender: 'male', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
+    const msg = buildUserPayload(personA, personB, 'new_match');
+    expect(msg).toContain("haven't been in a serious relationship");
+  });
+});
+
+describe('POST /api/repair — individual repair', () => {
+  beforeEach(() => {
+    mockCreate.mockReset();
+  });
+
+  it('accepts personA only (individual repair) without compatibility', async () => {
+    setMockLLMResponse(makeMockRepairResponse());
+    const personA = makeValidPerson();
+    const res = await api('POST', '/api/repair', {
+      personA,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.repair).toBeDefined();
+    expect(res.body.repair.realBreak).toBe('The real break.');
+  });
+
+  it('sends individual mode in payload when only personA is provided', async () => {
+    setMockLLMResponse(makeMockRepairResponse());
+    const personA = makeValidPerson();
+    await api('POST', '/api/repair', { personA });
+
+    // Check the LLM was called with mode: 'individual'
+    const callArgs = mockCreate.mock.calls[0][0];
+    const userPayload = JSON.parse(callArgs.messages[1].content);
+    expect(userPayload.mode).toBe('individual');
+    expect(userPayload.personB).toBeUndefined();
+  });
+
+  it('pair repair still requires compatibility', async () => {
+    const personA = makeValidPerson();
+    const personB = makeValidPerson({ name: 'Bob', gender: 'male' });
+    const res = await api('POST', '/api/repair', {
+      personA,
+      personB,
+      relationshipStatus: 'new_match',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('compatibility');
+  });
+
+  it('returns 400 when personA is invalid for individual repair', async () => {
+    const res = await api('POST', '/api/repair', {
+      personA: { name: '', gender: 'female', answers: [] },
+    });
     expect(res.status).toBe(400);
   });
 });

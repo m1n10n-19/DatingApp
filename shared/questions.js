@@ -1,6 +1,10 @@
 /**
  * Universal 5-question sequence for all users, plus gender-specific Q6.
  * Replaces the previous modular questionnaire (core + optional modules).
+ *
+ * "No History" protocol: when a user has no serious relationship history,
+ * Q4 (Template) is replaced with an alternative, and 3 additional questions
+ * are appended (Q7-Q9) for a total of up to 9 questions.
  */
 
 export const UNIVERSAL_QUESTIONS = [
@@ -41,6 +45,44 @@ export const UNIVERSAL_QUESTIONS = [
   },
 ];
 
+/**
+ * Replacement Q4 for users with no relationship history.
+ */
+export const NO_HISTORY_Q4 = {
+  id: 4,
+  layer: 'Template',
+  label: 'Layer 4: Template (No History)',
+  text: "You haven't been in a serious relationship yet. What do you think has kept you from one — and be honest: is it circumstance, fear, standards, or something you haven't named yet?",
+  placeholder: "What's actually kept you from a serious relationship...",
+};
+
+/**
+ * Additional questions appended for users with no relationship history (Q7-Q9).
+ */
+export const NO_HISTORY_EXTRA_QUESTIONS = [
+  {
+    id: 7,
+    layer: 'Projection',
+    label: 'Layer 7: Projection',
+    text: "When you imagine your future partner, what does a typical weeknight look like? Not the highlight reel — the ordinary. What are you doing at 8pm on a Wednesday with this person?",
+    placeholder: "The ordinary, not the fantasy...",
+  },
+  {
+    id: 8,
+    layer: 'Avoidance',
+    label: 'Layer 8: Avoidance',
+    text: "What's the version of a relationship you're most afraid of ending up in? Describe it specifically — not 'a bad one' but the particular kind of bad that haunts you.",
+    placeholder: "The specific relationship nightmare, not the generic one...",
+  },
+  {
+    id: 9,
+    layer: 'Readiness',
+    label: 'Layer 9: Readiness',
+    text: "What would need to be true — about you, not about the other person — for you to be ready for a real relationship? What's the gap between who you are now and who you'd need to be?",
+    placeholder: "The honest gap between now and ready...",
+  },
+];
+
 export const GENDER_QUESTIONS = {
   male: {
     id: 6,
@@ -59,31 +101,67 @@ export const GENDER_QUESTIONS = {
 };
 
 /**
- * Returns the full question list for a person, given their gender.
- * Always returns Q1-Q5. Appends Q6 if gender is 'male' or 'female'.
+ * Returns the full question list for a person, given their gender and
+ * relationship history status.
+ *
+ * @param {string} gender - 'male', 'female', or other
+ * @param {boolean} [hasHistory=true] - Whether the user has relationship history
+ * @returns {Array} question list
+ *
+ * With history (default): Q1-Q5 + optional Q6 gendered = 5 or 6
+ * Without history: Q1-Q3, alt-Q4, Q5, optional Q6 gendered, Q7-Q9 = 8 or 9
  */
-export function getQuestionsForGender(gender) {
-  const questions = [...UNIVERSAL_QUESTIONS];
+export function getQuestions(gender, hasHistory = true) {
+  let questions;
+
+  if (hasHistory) {
+    questions = [...UNIVERSAL_QUESTIONS];
+  } else {
+    // Replace Q4 with No History variant
+    questions = [
+      UNIVERSAL_QUESTIONS[0], // Q1
+      UNIVERSAL_QUESTIONS[1], // Q2
+      UNIVERSAL_QUESTIONS[2], // Q3
+      NO_HISTORY_Q4,          // alt-Q4
+      UNIVERSAL_QUESTIONS[4], // Q5
+    ];
+  }
+
+  // Append gendered Q6
   const genderKey = typeof gender === 'string' ? gender.toLowerCase() : '';
   if (GENDER_QUESTIONS[genderKey]) {
     questions.push(GENDER_QUESTIONS[genderKey]);
   }
+
+  // Append No History extra questions (Q7-Q9) after gendered Q6
+  if (!hasHistory) {
+    questions.push(...NO_HISTORY_EXTRA_QUESTIONS);
+  }
+
   return questions;
+}
+
+/** @deprecated Use getQuestions(gender, hasHistory). Kept for backward compatibility. */
+export function getQuestionsForGender(gender) {
+  return getQuestions(gender, true);
 }
 
 export const TRUTH_PREAMBLE = "This only works if you tell the truth — not the version of yourself you'd put on a resume, but the version that exists when no one's watching. We're going to ask you questions that most people avoid, not because they're cruel, but because honest answers are the only ones worth analyzing. If you perform here, the results will describe whoever you're pretending to be, not who you actually are. That's a waste of everyone's time. So be specific. Be uncomfortable. Say the thing you'd normally edit out. The algorithm can't judge you, but it can see through you — but only if you let it.";
 
 /**
- * Answers count: 5 universal + up to 1 gendered = 5 or 6 total.
+ * Answers count:
+ * With history: 5 universal + up to 1 gendered = 5 or 6 total.
+ * Without history: 5 (modified) + up to 1 gendered + 3 extra = 8 or 9 total.
  */
 export const MIN_ANSWERS = 5;
-export const MAX_ANSWERS = 6;
+export const MAX_ANSWERS = 9;
 
 export const INITIAL_PERSON = Object.freeze({
   id: '',
   name: '',
   gender: '',
   answers: Object.freeze(['', '', '', '', '', '']),
+  hasRelationshipHistory: true,
   schemaVersion: 2,
   createdAt: null,
 });
@@ -98,6 +176,7 @@ export function createInitialPerson() {
     name: '',
     gender: '',
     answers: ['', '', '', '', '', ''],
+    hasRelationshipHistory: true,
     schemaVersion: 2,
     createdAt: new Date().toISOString(),
   };

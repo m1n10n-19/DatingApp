@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   RotateCcw, AlertTriangle, Cpu, Loader2, Sparkles,
   Clock, Wrench, Shield, Eye, MessageCircle, Target,
-  Activity, Timer, Lightbulb, XCircle,
+  Activity, Timer, Lightbulb, XCircle, User,
 } from 'lucide-react';
 import ProfileCard from './ProfileCard';
 import CompatibilitySection from './CompatibilitySection';
@@ -55,10 +55,14 @@ export default function Results({
   repairError = null,
   simulateLoading = false,
   simulateError = null,
+  individualRepairLoading = null,
+  individualRepairError = null,
   onRequestRepair,
   onRequestSimulate,
+  onRequestIndividualRepair,
 }) {
   const [activeTab, setActiveTab] = useState('profiles');
+  const [individualRepairResults, setIndividualRepairResults] = useState({});
 
   if (error) {
     return (
@@ -137,14 +141,30 @@ export default function Results({
         {/* Content */}
         {activeTab === 'profiles' && (
           <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-center text-lg font-semibold text-accent mb-6">{personA.name}</h3>
-              <ProfileCard profile={results.personA} color="accent" />
-            </div>
-            <div>
-              <h3 className="text-center text-lg font-semibold text-rose mb-6">{personB.name}</h3>
-              <ProfileCard profile={results.personB} color="rose" />
-            </div>
+            {[
+              { person: personA, profile: results.personA, color: 'accent', key: 'A' },
+              { person: personB, profile: results.personB, color: 'rose', key: 'B' },
+            ].map(({ person, profile, color, key }) => (
+              <div key={key}>
+                <h3 className={`text-center text-lg font-semibold text-${color} mb-6`}>{person.name}</h3>
+                <ProfileCard profile={profile} color={color} />
+                {onRequestIndividualRepair && (
+                  <IndividualRepairSection
+                    person={person}
+                    personKey={key}
+                    loading={individualRepairLoading === key}
+                    error={individualRepairError?.key === key ? individualRepairError.message : null}
+                    result={individualRepairResults[key]}
+                    onRequest={() => {
+                      onRequestIndividualRepair(person, key, (repairData) => {
+                        setIndividualRepairResults((prev) => ({ ...prev, [key]: repairData }));
+                      });
+                    }}
+                    color={color}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -423,6 +443,106 @@ function RepairTab({ repair, loading, error, onRequest }) {
         Generate Repair Plan
       </button>
     </motion.div>
+  );
+}
+
+function IndividualRepairSection({ person, loading, error, result, onRequest, color }) {
+  const colorText = color === 'rose' ? 'text-rose' : 'text-accent';
+  const colorBorder = color === 'rose' ? 'border-rose/30' : 'border-accent/30';
+  const colorBg = color === 'rose' ? 'from-rose/10 to-rose/20' : 'from-accent/10 to-accent/20';
+
+  return (
+    <div className="mt-6">
+      {!result && !loading && !error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <button
+            onClick={onRequest}
+            className={`inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r ${colorBg} border ${colorBorder} text-text hover:border-opacity-70 transition-all cursor-pointer text-sm font-medium`}
+          >
+            <User className="w-4 h-4" />
+            Individual Repair for {person.name}
+          </button>
+        </motion.div>
+      )}
+
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-6"
+        >
+          <Loader2 className={`w-6 h-6 ${colorText} animate-spin mx-auto mb-2`} />
+          <p className="text-text-dim text-sm">Generating individual repair for {person.name}...</p>
+        </motion.div>
+      )}
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-4"
+        >
+          <p className="text-rose text-sm mb-2">Failed to generate individual repair.</p>
+          <p className="text-text-faint text-xs mb-3">{error}</p>
+          <button
+            onClick={onRequest}
+            className="inline-flex items-center gap-1 px-4 py-2 bg-surface border border-surface-light rounded-full text-text text-sm hover:border-accent/30 transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Retry
+          </button>
+        </motion.div>
+      )}
+
+      <AnimatePresence>
+        {result && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 p-5 rounded-2xl bg-surface/40 border border-surface-light/30"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Wrench className={`w-4 h-4 ${colorText}`} />
+              <h4 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+                Individual Repair — {person.name}
+              </h4>
+            </div>
+
+            {result.realBreak && (
+              <div className="mb-3">
+                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">The Real Break: </span>
+                <span className="text-text leading-relaxed text-sm">{result.realBreak}</span>
+              </div>
+            )}
+
+            {result.primaryMethod && (
+              <div className="mb-3">
+                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Primary Method: </span>
+                <span className="text-text leading-relaxed text-sm">{result.primaryMethod}</span>
+              </div>
+            )}
+
+            {result.practiceInstructions && (
+              <div className="mb-3">
+                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Practice: </span>
+                <span className="text-text leading-relaxed text-sm">{result.practiceInstructions}</span>
+              </div>
+            )}
+
+            {result.closingLine && (
+              <div className="mt-4 pt-3 border-t border-surface-light/30 text-center">
+                <p className="text-text text-sm italic">{result.closingLine}</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

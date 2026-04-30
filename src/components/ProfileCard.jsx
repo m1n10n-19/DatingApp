@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Fingerprint, Brain, Eye, Heart, AlertCircle, Sprout, BookOpen, MessageCircle } from 'lucide-react';
+import { Fingerprint, Brain, Eye, Heart, AlertCircle, Sprout, BookOpen, MessageCircle, ShieldAlert, Flag } from 'lucide-react';
 
 const sectionConfig = [
   { key: 'archetype', label: 'Archetype', icon: Fingerprint, isTitle: true },
@@ -78,12 +78,80 @@ export default function ProfileCard({ profile, color }) {
         );
       })}
 
+      {/* Core Fear */}
+      {profile.coreFear && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: (sectionConfig.length + 1) * 0.1 }}
+          className="mb-6 p-6 rounded-2xl bg-surface/40 border border-surface-light/30 hover:border-surface-light/60 transition-all duration-300"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldAlert className={`w-4 h-4 ${colors.text}`} />
+            <h3 className="text-sm font-medium text-text-dim uppercase tracking-wide">
+              Core Fear
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {profile.coreFear.primary && (
+              <div>
+                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Primary: </span>
+                <span className="text-text leading-relaxed text-sm">{profile.coreFear.primary}</span>
+              </div>
+            )}
+            {profile.coreFear.secondary && (
+              <div>
+                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Secondary: </span>
+                <span className="text-text leading-relaxed text-sm">{profile.coreFear.secondary}</span>
+              </div>
+            )}
+            {profile.coreFear.interaction && (
+              <div>
+                <span className="text-xs font-semibold text-text-dim uppercase tracking-wide">Interaction: </span>
+                <span className="text-text leading-relaxed text-sm">{profile.coreFear.interaction}</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Red Flags */}
+      {profile.redFlags && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: (sectionConfig.length + 2) * 0.1 }}
+          className="mb-6 p-6 rounded-2xl bg-rose/5 border border-rose/20 hover:border-rose/40 transition-all duration-300"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="w-4 h-4 text-rose" />
+            <h3 className="text-sm font-medium text-rose uppercase tracking-wide">
+              Red Flags
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {profile.redFlags.inThemselves && (
+              <div>
+                <span className="text-xs font-semibold text-rose uppercase tracking-wide">In Themselves: </span>
+                <span className="text-text leading-relaxed text-sm">{profile.redFlags.inThemselves}</span>
+              </div>
+            )}
+            {profile.redFlags.inOthers && (
+              <div>
+                <span className="text-xs font-semibold text-rose uppercase tracking-wide">In Others: </span>
+                <span className="text-text leading-relaxed text-sm">{profile.redFlags.inOthers}</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Closing Line */}
       {profile.closingLine && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: sectionConfig.length * 0.1 }}
+          transition={{ delay: (sectionConfig.length + 3) * 0.1 }}
           className={`mt-8 p-6 rounded-2xl bg-gradient-to-r ${color === 'rose' ? 'from-rose/5 to-rose/10' : 'from-accent/5 to-accent/10'} border ${colors.border} text-center`}
         >
           <div className="flex items-center justify-center gap-2 mb-3">

@@ -11,6 +11,15 @@ const mockResults = {
     complementProfile: 'Needs someone who leads with feeling.',
     likelyMistake: 'Will choose someone equally avoidant.',
     growthEdge: 'Learning to be present without a plan.',
+    coreFear: {
+      primary: 'Being seen as incompetent or needy.',
+      secondary: 'Abandonment if he stops being useful.',
+      interaction: 'The fear of incompetence drives hyper-competence, which masks the abandonment fear.',
+    },
+    redFlags: {
+      inThemselves: 'Emotional withdrawal disguised as maturity.',
+      inOthers: 'Blind to partners who confuse intensity with intimacy.',
+    },
     closingLine: 'He builds walls so well he forgot to leave a door.',
   },
   personB: {
@@ -21,6 +30,15 @@ const mockResults = {
     complementProfile: 'Needs someone with structural thinking.',
     likelyMistake: 'Will choose someone who mirrors her intensity.',
     growthEdge: 'Learning to step back without abandoning.',
+    coreFear: {
+      primary: 'Being alone and unworthy of love.',
+      secondary: 'That her emotional intensity drives people away.',
+      interaction: 'Fear of being alone makes her over-give, which paradoxically overwhelms partners.',
+    },
+    redFlags: {
+      inThemselves: 'Over-functioning emotionally to earn connection.',
+      inOthers: 'Rationalizes emotionally unavailable partners as deep.',
+    },
     closingLine: 'She burns so bright she forgets others need shade.',
   },
   compatibility: {
@@ -37,6 +55,8 @@ const mockResults = {
       'Neither brings up the thing that bothered them last week.',
     ],
     repairLever: 'Weekly check-ins where both share one unspoken thing.',
+    coreFearInteraction: 'His fear of being seen as incompetent collides with her fear of being alone.',
+    datingFatigueRisk: 'Moderate — both have enough self-awareness to avoid the doom loop.',
     closingLine: 'The architect and the flame — if he lets her in, she lights the whole structure.',
   },
   repair: null,
@@ -89,8 +109,8 @@ const mockSimulation = {
   closingLine: 'Ten years is not a prediction — it is a map of which version of themselves they choose to feed.',
 };
 
-const personA = { name: 'Alex', gender: 'male' };
-const personB = { name: 'Sam', gender: 'female' };
+const personA = { name: 'Alex', gender: 'male', answers: ['a1', 'a2', 'a3', 'a4', 'a5'] };
+const personB = { name: 'Sam', gender: 'female', answers: ['b1', 'b2', 'b3', 'b4', 'b5'] };
 
 const defaultProps = {
   results: mockResults,
@@ -102,8 +122,11 @@ const defaultProps = {
   repairError: null,
   simulateLoading: false,
   simulateError: null,
+  individualRepairLoading: null,
+  individualRepairError: null,
   onRequestRepair: () => {},
   onRequestSimulate: () => {},
+  onRequestIndividualRepair: vi.fn(),
 };
 
 describe('Results', () => {
@@ -440,5 +463,73 @@ describe('Results', () => {
     expect(screen.getByText('Crisis point.')).toBeInTheDocument();
     expect(screen.getByText('Commitment or drift.')).toBeInTheDocument();
     expect(screen.getByText('Restlessness or renewal.')).toBeInTheDocument();
+  });
+
+  // --- Core Fear and Red Flags in ProfileCard ---
+
+  it('renders coreFear fields on Profiles tab', () => {
+    render(<Results {...defaultProps} />);
+    expect(screen.getByText('Being seen as incompetent or needy.')).toBeInTheDocument();
+    expect(screen.getByText('Abandonment if he stops being useful.')).toBeInTheDocument();
+    expect(screen.getByText('The fear of incompetence drives hyper-competence, which masks the abandonment fear.')).toBeInTheDocument();
+    // Person B core fear
+    expect(screen.getByText('Being alone and unworthy of love.')).toBeInTheDocument();
+    expect(screen.getByText('That her emotional intensity drives people away.')).toBeInTheDocument();
+  });
+
+  it('renders redFlags fields on Profiles tab', () => {
+    render(<Results {...defaultProps} />);
+    expect(screen.getByText('Emotional withdrawal disguised as maturity.')).toBeInTheDocument();
+    expect(screen.getByText('Blind to partners who confuse intensity with intimacy.')).toBeInTheDocument();
+    // Person B red flags
+    expect(screen.getByText('Over-functioning emotionally to earn connection.')).toBeInTheDocument();
+    expect(screen.getByText('Rationalizes emotionally unavailable partners as deep.')).toBeInTheDocument();
+  });
+
+  it('renders Core Fear and Red Flags section headings', () => {
+    render(<Results {...defaultProps} />);
+    // Should have 2 Core Fear headings (one per person) and 2 Red Flags headings
+    const coreFearHeadings = screen.getAllByText('Core Fear');
+    expect(coreFearHeadings.length).toBe(2);
+    const redFlagsHeadings = screen.getAllByText('Red Flags');
+    expect(redFlagsHeadings.length).toBe(2);
+  });
+
+  // --- Individual Repair button ---
+
+  it('renders Individual Repair buttons on Profiles tab', () => {
+    render(<Results {...defaultProps} />);
+    expect(screen.getByText('Individual Repair for Alex')).toBeInTheDocument();
+    expect(screen.getByText('Individual Repair for Sam')).toBeInTheDocument();
+  });
+
+  it('clicking Individual Repair button calls onRequestIndividualRepair', () => {
+    const onRequestIndividualRepair = vi.fn();
+    render(<Results {...defaultProps} onRequestIndividualRepair={onRequestIndividualRepair} />);
+    fireEvent.click(screen.getByText('Individual Repair for Alex'));
+    expect(onRequestIndividualRepair).toHaveBeenCalledOnce();
+  });
+
+  it('shows loading state for individual repair', () => {
+    render(<Results {...defaultProps} individualRepairLoading="A" />);
+    expect(screen.getByText('Generating individual repair for Alex...')).toBeInTheDocument();
+  });
+
+  it('shows error state for individual repair', () => {
+    render(
+      <Results
+        {...defaultProps}
+        individualRepairError={{ key: 'A', message: 'Server failed' }}
+      />
+    );
+    expect(screen.getByText('Failed to generate individual repair.')).toBeInTheDocument();
+    expect(screen.getByText('Server failed')).toBeInTheDocument();
+  });
+
+  it('does not render Individual Repair buttons when onRequestIndividualRepair is not provided', () => {
+    const props = { ...defaultProps, onRequestIndividualRepair: undefined };
+    render(<Results {...props} />);
+    expect(screen.queryByText('Individual Repair for Alex')).not.toBeInTheDocument();
+    expect(screen.queryByText('Individual Repair for Sam')).not.toBeInTheDocument();
   });
 });

@@ -47,9 +47,15 @@ Never take answers at face value. Every answer has three layers:
 
 Always read Layer 3. That's where the real architecture lives.
 
-GENDER-AWARE READING:
+4. CONTRADICTION MAPPING — When two answers tell different stories, that gap IS the diagnosis. Don't resolve it — name it.
+
+5. GENDER-AWARE READING:
 - Men understate emotional reality. When a man says "I just move on" — look for the emotional reality underneath. Competence as emotional avoidance, humor as deflection, "I'm fine" masking shutdown or rage.
 - Women over-articulate emotional reality but understate behavioral patterns. When a woman says "I spiral and reflect" — look for whether awareness changes behavior or just narrative. Performed self-awareness masking the actually unflattering truth.
+
+6. CIA NARRATIVE STRUCTURE READING — Read the structure of HOW they tell the story, not just WHAT they tell. Sequence reveals priority. Detail reveals investment. Omission reveals avoidance. When someone front-loads context before emotion, they're managing your perception. When someone skips to emotion without context, they're performing vulnerability. The architecture of the narrative IS the diagnosis.
+
+7. CORE FEAR BENEATH VARIABLE STORY — Every person has ONE core fear driving all their relationship behavior. It doesn't change between relationships — only the manifestation changes. Identify the fear beneath the story they're telling. Common core fears: abandonment, engulfment, inadequacy, irrelevance, loss of control, exposure. The core fear explains why someone who "knows better" keeps repeating the same pattern.
 
 ═══════════════════════════════════════
 WRITING STYLE

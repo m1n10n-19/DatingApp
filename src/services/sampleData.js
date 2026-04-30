@@ -21,6 +21,7 @@ export const SAMPLE_PERSON_A = {
     // Q6 - Gendered (male): A moment of genuine strength
     "Building a bookshelf with my ex on a Saturday. No talking, just working side by side, handing tools back and forth like we'd done it a thousand times. I wasn't performing anything. I wasn't holding anything together. I was just present and doing something with my hands next to someone I loved, and for about two hours I forgot to monitor whether I was being enough. That's the only time I can remember where strength didn't feel like effort.",
   ],
+  hasRelationshipHistory: true,
   schemaVersion: 2,
   createdAt: '2025-01-15T10:30:00.000Z',
 };
@@ -48,6 +49,7 @@ export const SAMPLE_PERSON_B = {
     // Q6 - Gendered (female): A moment of genuine safety
     "A road trip where my partner pulled over because I was crying about something I couldn't even name, and he just held me in a gas station parking lot for twenty minutes without saying a word. He didn't try to fix it, didn't ask what was wrong, didn't check his phone. For twenty minutes I didn't have to be articulate or insightful or make my pain mean something. I just got to be a person who was sad, held by a person who didn't need a reason. That's the safest I've ever felt.",
   ],
+  hasRelationshipHistory: true,
   schemaVersion: 2,
   createdAt: '2025-01-15T11:00:00.000Z',
 };

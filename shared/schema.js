@@ -8,9 +8,23 @@
  * @property {string} id - UUID v4 identifier.
  * @property {string} name - Display name.
  * @property {string} gender - Gender identity string.
- * @property {string[]} answers - Flat array of 5 or 6 answer strings (Q1-Q5 universal, Q6 gender-specific).
+ * @property {string[]} answers - Flat array of 5-9 answer strings (Q1-Q5 universal, Q6 gender-specific, Q7-Q9 no-history).
+ * @property {boolean} hasRelationshipHistory - Whether the user has been in a serious relationship before.
  * @property {number} schemaVersion - Currently 2.
  * @property {string|null} createdAt - ISO 8601 timestamp or null for the empty template.
+ */
+
+/**
+ * @typedef {Object} CoreFear
+ * @property {string} primary - The single deepest fear driving all their relationship behavior.
+ * @property {string} secondary - A secondary fear that compounds or masks the primary one.
+ * @property {string} interaction - How these fears interact to create their specific relationship pattern.
+ */
+
+/**
+ * @typedef {Object} RedFlags
+ * @property {string} inThemselves - Patterns they exhibit that would damage a partner.
+ * @property {string} inOthers - Red flags in others they are blind to or rationalize.
  */
 
 /**
@@ -22,6 +36,8 @@
  * @property {string} complementProfile - What kind of person complements them.
  * @property {string} likelyMistake - The mistake they're most likely to make in relationships.
  * @property {string} growthEdge - Where their biggest growth opportunity lies.
+ * @property {CoreFear} coreFear - The core fear driving their relationship behavior.
+ * @property {RedFlags} redFlags - Red flags they exhibit and are blind to.
  * @property {string} closingLine - One sentence capturing this person's relationship architecture.
  */
 
@@ -36,6 +52,8 @@
  * @property {string[]} earlyWarnings - Exactly 3 early warning signs.
  * @property {string} shadowCollision - How their shadow patterns collide.
  * @property {string} repairLever - The key lever for repairing conflict.
+ * @property {string} coreFearInteraction - How their core fears interact and trigger each other.
+ * @property {string} datingFatigueRisk - Assessment of dating exhaustion impact on this match.
  * @property {string} closingLine - Final assessment line.
  */
 

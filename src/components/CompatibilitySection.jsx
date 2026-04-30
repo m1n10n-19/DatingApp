@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Zap, Flame, Copy, XCircle, TrendingUp, TrendingDown, AlertTriangle, Quote, Shield, Wrench } from 'lucide-react';
+import { Zap, Flame, Copy, XCircle, TrendingUp, TrendingDown, AlertTriangle, Quote, Shield, Wrench, ShieldAlert, Battery } from 'lucide-react';
 
 const verdictConfig = {
   COMPLEMENT: {
@@ -184,12 +184,41 @@ export default function CompatibilitySection({ compatibility }) {
         </Section>
       )}
 
+      {/* Core Fear Interaction */}
+      {compatibility.coreFearInteraction && (
+        <Section
+          title="Core Fear Interaction"
+          icon={<ShieldAlert className="w-4 h-4 text-warm" />}
+          delay={0.7}
+        >
+          <p className="text-text leading-relaxed">{compatibility.coreFearInteraction}</p>
+        </Section>
+      )}
+
+      {/* Dating Fatigue Risk — highlighted prominently */}
+      {compatibility.datingFatigueRisk && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="mb-6 p-6 rounded-2xl bg-amber-500/5 border-2 border-amber-500/30 hover:border-amber-500/50 transition-all duration-300"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Battery className="w-4 h-4 text-amber-400" />
+            <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">
+              Dating Fatigue Risk
+            </h3>
+          </div>
+          <p className="text-text leading-relaxed">{compatibility.datingFatigueRisk}</p>
+        </motion.div>
+      )}
+
       {/* Closing Line */}
       {compatibility.closingLine && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.8 }}
           className="mt-12 text-center"
         >
           <Quote className="w-6 h-6 text-accent/40 mx-auto mb-4" />

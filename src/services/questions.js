@@ -12,6 +12,9 @@ export {
   UNIVERSAL_QUESTIONS,
   GENDER_QUESTIONS,
   getQuestionsForGender,
+  getQuestions,
+  NO_HISTORY_Q4,
+  NO_HISTORY_EXTRA_QUESTIONS,
   MIN_ANSWERS,
   MAX_ANSWERS,
 } from '../../shared/questions.js';

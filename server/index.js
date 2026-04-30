@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
-import { getQuestionsForGender, MIN_ANSWERS, MAX_ANSWERS } from '../shared/questions.js';
+import { getQuestions, MIN_ANSWERS, MAX_ANSWERS } from '../shared/questions.js';
 import { ANALYZE_PROMPT } from './prompts/analyze.js';
 import { REPAIR_PROMPT } from './prompts/repair.js';
 import { SIMULATE_PROMPT } from './prompts/simulate.js';
@@ -212,12 +212,17 @@ function validatePerson(person, label) {
     return `${label} must have a gender.`;
   }
 
-  // answers validation: flat array of 5 or 6 non-empty strings
+  // hasRelationshipHistory: optional boolean, defaults to true
+  if (person.hasRelationshipHistory !== undefined && typeof person.hasRelationshipHistory !== 'boolean') {
+    return `${label} hasRelationshipHistory must be a boolean.`;
+  }
+
+  // answers validation: flat array of MIN_ANSWERS to MAX_ANSWERS non-empty strings
   if (!Array.isArray(person.answers)) {
     return `${label} must have an answers array.`;
   }
   if (person.answers.length < MIN_ANSWERS || person.answers.length > MAX_ANSWERS) {
-    return `${label} must have ${MIN_ANSWERS} or ${MAX_ANSWERS} answers.`;
+    return `${label} must have between ${MIN_ANSWERS} and ${MAX_ANSWERS} answers.`;
   }
   for (let i = 0; i < person.answers.length; i++) {
     if (typeof person.answers[i] !== 'string' || person.answers[i].trim().length === 0) {
@@ -241,7 +246,11 @@ function validateRelationshipStatus(status) {
 
 // --- Output validation / normalization ---
 const PROFILE_FIELDS = ['archetype', 'coreWiring', 'shadowPattern', 'loveTemplate', 'complementProfile', 'likelyMistake', 'growthEdge', 'closingLine'];
-const COMPAT_STRING_FIELDS = ['verdict', 'dynamic', 'breakingPoint', 'bestCase', 'worstCase', 'shadowCollision', 'repairLever', 'closingLine'];
+const PROFILE_NESTED_FIELDS = {
+  coreFear: ['primary', 'secondary', 'interaction'],
+  redFlags: ['inThemselves', 'inOthers'],
+};
+const COMPAT_STRING_FIELDS = ['verdict', 'dynamic', 'breakingPoint', 'bestCase', 'worstCase', 'shadowCollision', 'repairLever', 'coreFearInteraction', 'datingFatigueRisk', 'closingLine'];
 const VALID_VERDICTS = ['COMPLEMENT', 'COMBUSTION', 'MIRROR', 'MISFIRE'];
 
 const REPAIR_STRING_FIELDS = [
@@ -271,6 +280,14 @@ function normalizeAnalyze(raw) {
     const src = raw[key] || {};
     for (const field of PROFILE_FIELDS) {
       result[key][field] = typeof src[field] === 'string' ? src[field] : '';
+    }
+    // Normalize nested profile fields (coreFear, redFlags)
+    for (const [nestedKey, subFields] of Object.entries(PROFILE_NESTED_FIELDS)) {
+      const nestedSrc = src[nestedKey] || {};
+      result[key][nestedKey] = {};
+      for (const sf of subFields) {
+        result[key][nestedKey][sf] = typeof nestedSrc[sf] === 'string' ? nestedSrc[sf] : '';
+      }
     }
   }
 
@@ -396,9 +413,10 @@ async function runLLM({ systemPrompt, userPayload, provider: providerId = 'groq'
 function buildUserPayload(personA, personB, relationshipStatus) {
   function personSection(person, label) {
     const sections = [];
-    sections.push(`${label} (${person.name}, ${person.gender}):`);
+    const hasHistory = person.hasRelationshipHistory !== false;
+    sections.push(`${label} (${person.name}, ${person.gender}, hasRelationshipHistory: ${hasHistory}):`);
 
-    const questions = getQuestionsForGender(person.gender);
+    const questions = getQuestions(person.gender, hasHistory);
     const answers = person.answers || [];
 
     for (let i = 0; i < answers.length; i++) {
@@ -506,10 +524,57 @@ async function handlePairEndpoint(req, res, { prompt, kind, errorLabel }) {
   }
 }
 
-// --- POST /api/repair ---
-app.post('/api/repair', rateLimit, (req, res) =>
-  handlePairEndpoint(req, res, { prompt: REPAIR_PROMPT, kind: 'repair', errorLabel: 'Repair' })
-);
+// --- POST /api/repair (supports pair repair AND individual repair) ---
+app.post('/api/repair', rateLimit, async (req, res) => {
+  try {
+    const { personA, personB, relationshipStatus: rawStatus, compatibility, provider: providerId = 'groq', model: modelId } = req.body;
+
+    const statusError = validateRelationshipStatus(rawStatus);
+    if (statusError) return res.status(400).json({ error: statusError });
+    const relationshipStatus = rawStatus || 'new_match';
+
+    // personA is always required
+    const errorA = validatePerson(personA, 'Person A');
+    if (errorA) return res.status(400).json({ error: errorA });
+
+    // Check if this is an individual repair (personB is null/undefined)
+    const isIndividual = !personB;
+
+    if (isIndividual) {
+      // Individual repair: only personA, no compatibility required
+      const userPayload = JSON.stringify({
+        personA: { name: personA.name, gender: personA.gender, answers: personA.answers, hasRelationshipHistory: personA.hasRelationshipHistory !== false },
+        mode: 'individual',
+      });
+
+      const raw = await runLLM({ systemPrompt: REPAIR_PROMPT, userPayload, provider: providerId, model: modelId });
+      res.json(normalizeResult(raw, 'repair'));
+    } else {
+      // Pair repair: both persons + compatibility required
+      const errorB = validatePerson(personB, 'Person B');
+      if (errorB) return res.status(400).json({ error: errorB });
+
+      const compatError = validateCompatibility(compatibility);
+      if (compatError) return res.status(400).json({ error: compatError });
+
+      const userPayload = JSON.stringify({
+        personA: { name: personA.name, gender: personA.gender, answers: personA.answers },
+        personB: { name: personB.name, gender: personB.gender, answers: personB.answers },
+        relationshipStatus,
+        compatibility,
+      });
+
+      const raw = await runLLM({ systemPrompt: REPAIR_PROMPT, userPayload, provider: providerId, model: modelId });
+      res.json(normalizeResult(raw, 'repair'));
+    }
+  } catch (error) {
+    console.error('Repair error:', error);
+    res.status(500).json({
+      error: 'Failed to generate repair',
+      details: error.message,
+    });
+  }
+});
 
 // --- POST /api/simulate ---
 app.post('/api/simulate', rateLimit, (req, res) =>
@@ -525,7 +590,7 @@ app.use((err, req, res, next) => {
 });
 
 // Export for testing
-export { app, validatePerson, normalizeResult, buildUserPayload, MODEL_PROVIDERS, runLLM, validateCompatibility };
+export { app, validatePerson, normalizeResult, buildUserPayload, MODEL_PROVIDERS, runLLM, validateCompatibility, PROFILE_NESTED_FIELDS };
 
 const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {

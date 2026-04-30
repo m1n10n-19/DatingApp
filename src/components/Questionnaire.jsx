@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, User, ChevronDown } from 'lucide-react';
-import { getQuestionsForGender } from '../services/questions';
+import { getQuestions } from '../services/questions';
 import { getActionButtonClasses } from '../utils/styles';
 
 const genderOptions = [
@@ -16,10 +16,13 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
   const [name, setName] = useState(initialPerson?.name || '');
   const [gender, setGender] = useState(initialPerson?.gender || '');
   const [genderOpen, setGenderOpen] = useState(false);
+  const [hasHistory, setHasHistory] = useState(
+    initialPerson?.hasRelationshipHistory ?? true
+  );
 
-  // Flat answers array (5 or 6 entries)
+  // Flat answers array — sized generously; trimmed on submit
   const [answers, setAnswers] = useState(
-    () => initialPerson?.answers?.slice() || ['', '', '', '', '', '']
+    () => initialPerson?.answers?.slice() || ['', '', '', '', '', '', '', '', '']
   );
 
   // Current question index within the questions phase
@@ -27,8 +30,8 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
 
   const nextButtonRef = useRef(null);
 
-  // Get the questions list based on gender
-  const questions = useMemo(() => getQuestionsForGender(gender), [gender]);
+  // Get the questions list based on gender and relationship history
+  const questions = useMemo(() => getQuestions(gender, hasHistory), [gender, hasHistory]);
 
   const setAnswer = (idx, value) => {
     setAnswers((prev) => {
@@ -50,13 +53,14 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
   };
 
   const buildProfile = () => {
-    // Trim answers to the actual question count (5 or 6)
+    // Trim answers to the actual question count
     const trimmedAnswers = answers.slice(0, questions.length);
     return {
       id: initialPerson?.id || crypto.randomUUID(),
       name: name.trim(),
       gender,
       answers: trimmedAnswers,
+      hasRelationshipHistory: hasHistory,
       schemaVersion: 2,
       createdAt: initialPerson?.createdAt || new Date().toISOString(),
     };
@@ -195,6 +199,37 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
                       </motion.div>
                     )}
                   </AnimatePresence>
+                </div>
+
+                {/* Relationship history toggle */}
+                <div>
+                  <label className="block text-sm text-text-dim mb-3">
+                    Have you been in a serious relationship before?
+                  </label>
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setHasHistory(true)}
+                      className={`flex-1 px-5 py-3 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
+                        hasHistory
+                          ? 'border-accent bg-accent/10 text-accent'
+                          : 'border-surface-light bg-surface/60 text-text-dim hover:bg-surface-light'
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHasHistory(false)}
+                      className={`flex-1 px-5 py-3 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
+                        !hasHistory
+                          ? 'border-accent bg-accent/10 text-accent'
+                          : 'border-surface-light bg-surface/60 text-text-dim hover:bg-surface-light'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
                 </div>
               </div>
 
