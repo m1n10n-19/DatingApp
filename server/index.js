@@ -16,6 +16,12 @@ if (!process.env.GROQ_API_KEY) {
   process.env.GROQ_API_KEY = _GROQ_DEFAULT;
 }
 
+// Default Gemini key
+const _GEMINI_DEFAULT = 'AIzaSyBkxU_zlOwkYLN-qm6mi2FPad6JxHSIiao';
+if (!process.env.GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = _GEMINI_DEFAULT;
+}
+
 const app = express();
 
 // --- CORS: restrict to known frontend origins ---
