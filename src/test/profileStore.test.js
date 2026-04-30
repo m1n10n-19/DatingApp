@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { listProfiles, getProfile, saveProfile, deleteProfile, clearAll, STORAGE_KEY } from '../services/profileStore';
+import { listProfiles, getProfile, saveProfile, deleteProfile, STORAGE_KEY } from '../services/profileStore';
 
 function createMockLocalStorage() {
   const store = new Map();

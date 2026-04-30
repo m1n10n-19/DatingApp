@@ -112,9 +112,9 @@ Set an API key at runtime (in-memory only, not persisted to disk).
 
 `archetype` · `coreWiring` · `shadowPattern` · `loveTemplate` · `complementProfile` · `likelyMistake` · `growthEdge`
 
-### Compatibility (10 fields)
+### Compatibility (8 fields)
 
-`verdict` (enum) · `score` (0-100) · `dynamic` · `magnetism` · `friction` · `shadowCollision` · `breakingPoint` · `repairLever` · `earlyWarnings` (3 strings) · `closingLine`
+`verdict` (enum) · `score` (0-100) · `dynamic` · `shadowCollision` · `breakingPoint` · `repairLever` · `earlyWarnings` (3 strings) · `closingLine`
 
 ### Repair (8 fields)
 

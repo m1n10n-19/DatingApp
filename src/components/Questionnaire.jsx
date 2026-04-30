@@ -103,45 +103,21 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
     }
   }, [phase, coreAnswers, kokologyAnswers, shadowAnswers, desireAnswers, contradictionAnswers]);
 
+  const answerConfigs = {
+    core: { getter: () => coreAnswers, setter: setCoreAnswers },
+    kokology: { getter: () => kokologyAnswers, setter: setKokologyAnswers },
+    shadow: { getter: () => shadowAnswers, setter: setShadowAnswers },
+    desire: { getter: () => desireAnswers, setter: setDesireAnswers },
+    contradictions_first: { getter: () => contradictionAnswers, setter: setContradictionAnswers },
+    contradictions_second: { getter: () => contradictionAnswers, setter: setContradictionAnswers, offset: 3 },
+  };
+
   const setCurrentAnswer = (idx, value) => {
-    switch (phase) {
-      case 'core': {
-        const next = [...coreAnswers];
-        next[idx] = value;
-        setCoreAnswers(next);
-        break;
-      }
-      case 'kokology': {
-        const next = [...kokologyAnswers];
-        next[idx] = value;
-        setKokologyAnswers(next);
-        break;
-      }
-      case 'shadow': {
-        const next = [...shadowAnswers];
-        next[idx] = value;
-        setShadowAnswers(next);
-        break;
-      }
-      case 'desire': {
-        const next = [...desireAnswers];
-        next[idx] = value;
-        setDesireAnswers(next);
-        break;
-      }
-      case 'contradictions_first': {
-        const next = [...contradictionAnswers];
-        next[idx] = value;
-        setContradictionAnswers(next);
-        break;
-      }
-      case 'contradictions_second': {
-        const next = [...contradictionAnswers];
-        next[idx + 3] = value;
-        setContradictionAnswers(next);
-        break;
-      }
-    }
+    const config = answerConfigs[phase];
+    if (!config) return;
+    const next = [...config.getter()];
+    next[idx + (config.offset || 0)] = value;
+    config.setter(next);
   };
 
   // Determine the next phase, skipping disabled modules
@@ -218,30 +194,20 @@ export default function Questionnaire({ personLabel, initialPerson, onComplete, 
   };
 
   // Progress calculation
-  const totalPhases = PHASES.filter(
-    (p) =>
-      p === 'name_gender' ||
-      p === 'core' ||
-      p === 'module_select' ||
-      p === 'done' ||
-      (p === 'contradictions_first' && enabledModules.includes('contradictions')) ||
-      (p === 'contradictions_second' && enabledModules.includes('contradictions')) ||
-      (p === 'kokology' && enabledModules.includes('kokology')) ||
-      (p === 'shadow' && enabledModules.includes('shadow')) ||
-      (p === 'desire' && enabledModules.includes('desire'))
-  ).length;
+  const isPhaseEnabled = (p) =>
+    p === 'name_gender' ||
+    p === 'core' ||
+    p === 'module_select' ||
+    p === 'done' ||
+    (p === 'contradictions_first' && enabledModules.includes('contradictions')) ||
+    (p === 'contradictions_second' && enabledModules.includes('contradictions')) ||
+    (p === 'kokology' && enabledModules.includes('kokology')) ||
+    (p === 'shadow' && enabledModules.includes('shadow')) ||
+    (p === 'desire' && enabledModules.includes('desire'));
+
+  const totalPhases = PHASES.filter(isPhaseEnabled).length;
   const currentPhaseIdx = PHASES.filter(
-    (p, i) =>
-      i <= PHASES.indexOf(phase) &&
-      (p === 'name_gender' ||
-        p === 'core' ||
-        p === 'module_select' ||
-        p === 'done' ||
-        (p === 'contradictions_first' && enabledModules.includes('contradictions')) ||
-        (p === 'contradictions_second' && enabledModules.includes('contradictions')) ||
-        (p === 'kokology' && enabledModules.includes('kokology')) ||
-        (p === 'shadow' && enabledModules.includes('shadow')) ||
-        (p === 'desire' && enabledModules.includes('desire')))
+    (p, i) => i <= PHASES.indexOf(phase) && isPhaseEnabled(p)
   ).length;
   const progress = Math.min(100, (currentPhaseIdx / totalPhases) * 100);
 

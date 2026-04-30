@@ -5,6 +5,42 @@ import ProfileCard from './ProfileCard';
 import CompatibilitySection from './CompatibilitySection';
 import { getTabButtonClasses } from '../utils/styles';
 
+function TabErrorState({ message, detail, onRetry }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center py-16"
+    >
+      <div className="w-14 h-14 rounded-full bg-rose/10 border border-rose/20 flex items-center justify-center mx-auto mb-6">
+        <AlertTriangle className="w-7 h-7 text-rose" />
+      </div>
+      <p className="text-text-dim mb-2">{message}</p>
+      <p className="text-sm text-text-faint mb-6 break-words">{detail}</p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 px-6 py-3 bg-surface border border-surface-light rounded-full text-text hover:border-accent/30 transition-all cursor-pointer"
+      >
+        <RotateCcw className="w-4 h-4" />
+        Try Again
+      </button>
+    </motion.div>
+  );
+}
+
+function TabLoadingState({ message }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="text-center py-16"
+    >
+      <Loader2 className="w-8 h-8 text-accent animate-spin mx-auto mb-4" />
+      <p className="text-text-dim">{message}</p>
+    </motion.div>
+  );
+}
+
 export default function Results({
   results,
   error,
@@ -155,38 +191,16 @@ export default function Results({
 function RepairTab({ repair, loading, error, onRequest, personAName, personBName }) {
   if (error) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center py-16"
-      >
-        <div className="w-14 h-14 rounded-full bg-rose/10 border border-rose/20 flex items-center justify-center mx-auto mb-6">
-          <AlertTriangle className="w-7 h-7 text-rose" />
-        </div>
-        <p className="text-text-dim mb-2">Failed to generate repair guidance.</p>
-        <p className="text-sm text-text-faint mb-6 break-words">{error}</p>
-        <button
-          onClick={onRequest}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-surface border border-surface-light rounded-full text-text hover:border-accent/30 transition-all cursor-pointer"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Try Again
-        </button>
-      </motion.div>
+      <TabErrorState
+        message="Failed to generate repair guidance."
+        detail={error}
+        onRetry={onRequest}
+      />
     );
   }
 
   if (loading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center py-16"
-      >
-        <Loader2 className="w-8 h-8 text-accent animate-spin mx-auto mb-4" />
-        <p className="text-text-dim">Generating repair guidance...</p>
-      </motion.div>
-    );
+    return <TabLoadingState message="Generating repair guidance..." />;
   }
 
   if (repair) {
@@ -285,38 +299,16 @@ function RepairTab({ repair, loading, error, onRequest, personAName, personBName
 function SimulateTab({ simulation, loading, error, onRequest }) {
   if (error) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center py-16"
-      >
-        <div className="w-14 h-14 rounded-full bg-rose/10 border border-rose/20 flex items-center justify-center mx-auto mb-6">
-          <AlertTriangle className="w-7 h-7 text-rose" />
-        </div>
-        <p className="text-text-dim mb-2">Failed to generate simulation.</p>
-        <p className="text-sm text-text-faint mb-6 break-words">{error}</p>
-        <button
-          onClick={onRequest}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-surface border border-surface-light rounded-full text-text hover:border-accent/30 transition-all cursor-pointer"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Try Again
-        </button>
-      </motion.div>
+      <TabErrorState
+        message="Failed to generate simulation."
+        detail={error}
+        onRetry={onRequest}
+      />
     );
   }
 
   if (loading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center py-16"
-      >
-        <Loader2 className="w-8 h-8 text-accent animate-spin mx-auto mb-4" />
-        <p className="text-text-dim">Projecting future...</p>
-      </motion.div>
-    );
+    return <TabLoadingState message="Projecting future..." />;
   }
 
   if (simulation) {

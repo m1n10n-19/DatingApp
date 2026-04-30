@@ -40,14 +40,14 @@ const modelsResponse = {
     ]),
 };
 
-const originalFetch = global.fetch;
+const originalFetch = globalThis.fetch;
 
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __setStore([]);
     // Default fetch mock that handles ModelSelector's /api/models call
-    global.fetch = vi.fn((url) => {
+    globalThis.fetch = vi.fn((url) => {
       if (url === '/api/models') {
         return Promise.resolve(modelsResponse);
       }
@@ -60,7 +60,7 @@ describe('App', () => {
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    globalThis.fetch = originalFetch;
   });
 
   it('renders the landing page initially', async () => {
@@ -127,7 +127,7 @@ describe('App', () => {
   });
 
   it('sample flow uses default new_match status and goes to analyzing', async () => {
-    global.fetch = vi.fn((url) => {
+    globalThis.fetch = vi.fn((url) => {
       if (url === '/api/models') {
         return Promise.resolve(modelsResponse);
       }
@@ -150,7 +150,7 @@ describe('App', () => {
     });
 
     // Verify fetch was called with new_match
-    const analyzeCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/analyze');
+    const analyzeCalls = globalThis.fetch.mock.calls.filter(([url]) => url === '/api/analyze');
     expect(analyzeCalls.length).toBe(1);
     const body = JSON.parse(analyzeCalls[0][1].body);
     expect(body.relationshipStatus).toBe('new_match');
@@ -158,7 +158,7 @@ describe('App', () => {
 
   it('status→analyzing happens before fetch resolves', async () => {
     let resolveAnalyze;
-    global.fetch = vi.fn((url) => {
+    globalThis.fetch = vi.fn((url) => {
       if (url === '/api/models') {
         return Promise.resolve(modelsResponse);
       }
@@ -212,7 +212,7 @@ describe('App', () => {
       },
     };
 
-    global.fetch = vi.fn((url) => {
+    globalThis.fetch = vi.fn((url) => {
       if (url === '/api/models') {
         return Promise.resolve(modelsResponse);
       }
@@ -260,7 +260,7 @@ describe('App', () => {
     });
 
     // Verify /api/repair was called
-    const repairCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/repair');
+    const repairCalls = globalThis.fetch.mock.calls.filter(([url]) => url === '/api/repair');
     expect(repairCalls.length).toBe(1);
     const repairBody = JSON.parse(repairCalls[0][1].body);
     expect(repairBody.compatibility).toBeDefined();
@@ -272,7 +272,7 @@ describe('App', () => {
   });
 
   it('handleRequestRepair sets repairError on fetch failure', async () => {
-    global.fetch = vi.fn((url) => {
+    globalThis.fetch = vi.fn((url) => {
       if (url === '/api/models') {
         return Promise.resolve(modelsResponse);
       }
@@ -335,7 +335,7 @@ describe('App', () => {
       },
     };
 
-    global.fetch = vi.fn((url) => {
+    globalThis.fetch = vi.fn((url) => {
       if (url === '/api/models') {
         return Promise.resolve(modelsResponse);
       }
@@ -380,7 +380,7 @@ describe('App', () => {
     });
 
     // Verify /api/simulate was called
-    const simCalls = global.fetch.mock.calls.filter(([url]) => url === '/api/simulate');
+    const simCalls = globalThis.fetch.mock.calls.filter(([url]) => url === '/api/simulate');
     expect(simCalls.length).toBe(1);
 
     // Simulation data should now be rendered

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
-import { QUESTIONS } from '../shared/questions.js';
+import { CORE_QUESTIONS, KOKOLOGY_QUESTIONS, SHADOW_QUESTIONS, DESIRE_QUESTIONS, CONTRADICTION_PAIRS } from '../shared/questions.js';
 import { ANALYZE_PROMPT } from './prompts/analyze.js';
 import { REPAIR_PROMPT } from './prompts/repair.js';
 import { SIMULATE_PROMPT } from './prompts/simulate.js';
@@ -78,6 +78,7 @@ const MODEL_PROVIDERS = {
     envKey: 'GROQ_API_KEY',
     models: [
       { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (fast)' },
       { id: 'llama3-70b-8192', name: 'Llama 3 70B' },
       { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
       { id: 'gemma2-9b-it', name: 'Gemma 2 9B' },
@@ -396,6 +397,23 @@ async function runLLM({ systemPrompt, userPayload, provider: providerId = 'groq'
   return parsed;
 }
 
+// --- Module question lookup for payload building ---
+const MODULE_QUESTIONS = {
+  kokology: KOKOLOGY_QUESTIONS,
+  shadow: SHADOW_QUESTIONS,
+  desire: DESIRE_QUESTIONS,
+};
+
+function getModuleQuestionTexts(mod) {
+  if (mod === 'contradictions') {
+    return [
+      ...CONTRADICTION_PAIRS.map((p) => p.first.text),
+      ...CONTRADICTION_PAIRS.map((p) => p.second.text),
+    ];
+  }
+  return (MODULE_QUESTIONS[mod] || []).map((q) => q.text);
+}
+
 // --- Build user payload for analyze ---
 function buildUserPayload(personA, personB, relationshipStatus) {
   function personSection(person, label) {
@@ -403,21 +421,23 @@ function buildUserPayload(personA, personB, relationshipStatus) {
     sections.push(`${label} (${person.name}, ${person.gender}):`);
 
     // Core questions
-    const coreQuestions = QUESTIONS; // QUESTIONS = CORE_QUESTIONS
     sections.push('\nCORE QUESTIONS:');
-    for (let i = 0; i < coreQuestions.length; i++) {
-      sections.push(`Question ${i + 1}: ${coreQuestions[i].text}`);
+    for (let i = 0; i < CORE_QUESTIONS.length; i++) {
+      sections.push(`Question ${i + 1}: ${CORE_QUESTIONS[i].text}`);
       sections.push(`Answer: ${person.moduleAnswers.core[i]}`);
     }
 
-    // Optional module answers
+    // Optional module answers (include question text for each)
     if (person.enabledModules && person.enabledModules.length > 0) {
       for (const mod of person.enabledModules) {
         const answers = person.moduleAnswers[mod];
         if (answers) {
+          const questionTexts = getModuleQuestionTexts(mod);
           sections.push(`\n${mod.toUpperCase()} QUESTIONS:`);
           for (let i = 0; i < answers.length; i++) {
-            sections.push(`${mod} Q${i + 1}: ${answers[i]}`);
+            const qText = questionTexts[i] || `${mod} Q${i + 1}`;
+            sections.push(`Question: ${qText}`);
+            sections.push(`Answer: ${answers[i]}`);
           }
         }
       }
@@ -429,19 +449,12 @@ function buildUserPayload(personA, personB, relationshipStatus) {
   return `Analyze these two people:\n\nRelationship Status: ${relationshipStatus}\n\nPERSON A ${personSection(personA, 'Person A')}\n\nPERSON B ${personSection(personB, 'Person B')}`;
 }
 
-// Legacy buildUserMessage kept for export compatibility
-function buildUserMessage(personA, personB) {
-  return buildUserPayload(personA, personB, 'new_match');
-}
-
 // --- Compatibility validation for repair/simulate ---
-const COMPAT_REQUIRED_STRING_FIELDS = ['verdict', 'dynamic', 'breakingPoint', 'bestCase', 'worstCase', 'shadowCollision', 'repairLever', 'closingLine'];
-
 function validateCompatibility(compatibility) {
   if (!compatibility || typeof compatibility !== 'object') {
     return 'compatibility must be an object.';
   }
-  for (const field of COMPAT_REQUIRED_STRING_FIELDS) {
+  for (const field of COMPAT_STRING_FIELDS) {
     if (typeof compatibility[field] !== 'string') {
       return `compatibility.${field} must be a string.`;
     }
@@ -491,23 +504,20 @@ app.post('/api/analyze', rateLimit, async (req, res) => {
   }
 });
 
-// --- POST /api/repair ---
-app.post('/api/repair', rateLimit, async (req, res) => {
+// --- Shared handler for pair endpoints (repair + simulate) ---
+async function handlePairEndpoint(req, res, { prompt, kind, errorLabel }) {
   try {
     const { personA, personB, relationshipStatus: rawStatus, compatibility, provider: providerId = 'groq', model: modelId } = req.body;
 
-    // Validate relationshipStatus
     const statusError = validateRelationshipStatus(rawStatus);
     if (statusError) return res.status(400).json({ error: statusError });
     const relationshipStatus = rawStatus || 'new_match';
 
-    // Validate inputs
     const errorA = validatePerson(personA, 'Person A');
     if (errorA) return res.status(400).json({ error: errorA });
     const errorB = validatePerson(personB, 'Person B');
     if (errorB) return res.status(400).json({ error: errorB });
 
-    // Validate compatibility
     const compatError = validateCompatibility(compatibility);
     if (compatError) return res.status(400).json({ error: compatError });
 
@@ -518,58 +528,26 @@ app.post('/api/repair', rateLimit, async (req, res) => {
       compatibility,
     });
 
-    const raw = await runLLM({ systemPrompt: REPAIR_PROMPT, userPayload, provider: providerId, model: modelId });
-
-    const result = normalizeResult(raw, 'repair');
-    res.json(result);
+    const raw = await runLLM({ systemPrompt: prompt, userPayload, provider: providerId, model: modelId });
+    res.json(normalizeResult(raw, kind));
   } catch (error) {
-    console.error('Repair error:', error);
+    console.error(`${errorLabel} error:`, error);
     res.status(500).json({
-      error: 'Failed to generate repair guidance',
+      error: `Failed to generate ${errorLabel.toLowerCase()}`,
       details: error.message,
     });
   }
-});
+}
+
+// --- POST /api/repair ---
+app.post('/api/repair', rateLimit, (req, res) =>
+  handlePairEndpoint(req, res, { prompt: REPAIR_PROMPT, kind: 'repair', errorLabel: 'Repair' })
+);
 
 // --- POST /api/simulate ---
-app.post('/api/simulate', rateLimit, async (req, res) => {
-  try {
-    const { personA, personB, relationshipStatus: rawStatus, compatibility, provider: providerId = 'groq', model: modelId } = req.body;
-
-    // Validate relationshipStatus
-    const statusError = validateRelationshipStatus(rawStatus);
-    if (statusError) return res.status(400).json({ error: statusError });
-    const relationshipStatus = rawStatus || 'new_match';
-
-    // Validate inputs
-    const errorA = validatePerson(personA, 'Person A');
-    if (errorA) return res.status(400).json({ error: errorA });
-    const errorB = validatePerson(personB, 'Person B');
-    if (errorB) return res.status(400).json({ error: errorB });
-
-    // Validate compatibility
-    const compatError = validateCompatibility(compatibility);
-    if (compatError) return res.status(400).json({ error: compatError });
-
-    const userPayload = JSON.stringify({
-      personA: { name: personA.name, gender: personA.gender, moduleAnswers: personA.moduleAnswers, enabledModules: personA.enabledModules },
-      personB: { name: personB.name, gender: personB.gender, moduleAnswers: personB.moduleAnswers, enabledModules: personB.enabledModules },
-      relationshipStatus,
-      compatibility,
-    });
-
-    const raw = await runLLM({ systemPrompt: SIMULATE_PROMPT, userPayload, provider: providerId, model: modelId });
-
-    const result = normalizeResult(raw, 'simulate');
-    res.json(result);
-  } catch (error) {
-    console.error('Simulation error:', error);
-    res.status(500).json({
-      error: 'Failed to generate simulation',
-      details: error.message,
-    });
-  }
-});
+app.post('/api/simulate', rateLimit, (req, res) =>
+  handlePairEndpoint(req, res, { prompt: SIMULATE_PROMPT, kind: 'simulate', errorLabel: 'Simulation' })
+);
 
 // CORS error handler — return JSON instead of Express default HTML error page
 app.use((err, req, res, next) => {
@@ -580,7 +558,7 @@ app.use((err, req, res, next) => {
 });
 
 // Export for testing
-export { app, validatePerson, normalizeResult, buildUserMessage, MODEL_PROVIDERS, runLLM, validateCompatibility };
+export { app, validatePerson, normalizeResult, buildUserPayload, MODEL_PROVIDERS, runLLM, validateCompatibility };
 
 const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {

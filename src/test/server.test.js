@@ -4,10 +4,9 @@ import { createServer } from 'node:http';
 // Mock the openai module before importing server
 const mockCreate = vi.fn();
 
-const { setRateLimitMax } = vi.hoisted(() => {
+vi.hoisted(() => {
   // Raise rate limit for tests so we don't hit 429 — must be set before server module loads
-  process.env.RATE_LIMIT_MAX = '100000';
-  return { setRateLimitMax: true };
+  globalThis.process.env.RATE_LIMIT_MAX = '100000';
 });
 
 vi.mock('openai', () => {
@@ -23,7 +22,7 @@ vi.mock('openai', () => {
   return { default: MockOpenAI };
 });
 
-import { app, validatePerson, normalizeResult, buildUserMessage, MODEL_PROVIDERS, validateCompatibility } from '../../server/index.js';
+import { app, validatePerson, normalizeResult, buildUserPayload } from '../../server/index.js';
 
 // --- Test server setup ---
 let server;
@@ -488,7 +487,7 @@ describe('normalizeResult — simulate', () => {
   });
 });
 
-describe('buildUserMessage', () => {
+describe('buildUserPayload', () => {
   const personA = {
     name: 'Alice',
     gender: 'female',
@@ -503,7 +502,7 @@ describe('buildUserMessage', () => {
   };
 
   it('includes both person names and genders', () => {
-    const msg = buildUserMessage(personA, personB);
+    const msg = buildUserPayload(personA, personB, 'new_match');
     expect(msg).toContain('Alice');
     expect(msg).toContain('female');
     expect(msg).toContain('Bob');
@@ -511,16 +510,73 @@ describe('buildUserMessage', () => {
   });
 
   it('includes all core answers', () => {
-    const msg = buildUserMessage(personA, personB);
+    const msg = buildUserPayload(personA, personB, 'new_match');
     for (const ans of [...personA.moduleAnswers.core, ...personB.moduleAnswers.core]) {
       expect(msg).toContain(ans);
     }
   });
 
   it('labels persons as PERSON A and PERSON B', () => {
-    const msg = buildUserMessage(personA, personB);
+    const msg = buildUserPayload(personA, personB, 'new_match');
     expect(msg).toContain('PERSON A');
     expect(msg).toContain('PERSON B');
+  });
+
+  it('includes relationship status in payload', () => {
+    const msg = buildUserPayload(personA, personB, 'existing_couple');
+    expect(msg).toContain('existing_couple');
+  });
+
+  it('includes optional module question text and answers', () => {
+    const personWithModules = {
+      name: 'Alice',
+      gender: 'female',
+      enabledModules: ['kokology', 'shadow', 'desire'],
+      moduleAnswers: {
+        core: ['Core 1', 'Core 2', 'Core 3'],
+        kokology: ['Kok 1', 'Kok 2', 'Kok 3', 'Kok 4'],
+        shadow: ['Shadow 1', 'Shadow 2', 'Shadow 3'],
+        desire: ['Desire 1', 'Desire 2'],
+      },
+    };
+    const msg = buildUserPayload(personWithModules, personB, 'new_match');
+
+    // Should include module section headers
+    expect(msg).toContain('KOKOLOGY QUESTIONS:');
+    expect(msg).toContain('SHADOW QUESTIONS:');
+    expect(msg).toContain('DESIRE QUESTIONS:');
+
+    // Should include actual question text (not just "kokology Q1")
+    expect(msg).toContain('You are a child');
+    expect(msg).toContain('What trait in other people irritates you most');
+    expect(msg).toContain('What do you want from a partner');
+
+    // Should include the answers
+    expect(msg).toContain('Kok 1');
+    expect(msg).toContain('Shadow 1');
+    expect(msg).toContain('Desire 1');
+  });
+
+  it('includes contradiction question text for both halves', () => {
+    const personWithContradictions = {
+      name: 'Alice',
+      gender: 'female',
+      enabledModules: ['contradictions'],
+      moduleAnswers: {
+        core: ['Core 1', 'Core 2', 'Core 3'],
+        contradictions: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
+      },
+    };
+    const msg = buildUserPayload(personWithContradictions, personB, 'new_match');
+
+    expect(msg).toContain('CONTRADICTIONS QUESTIONS:');
+    // Should include first-half question text
+    expect(msg).toContain('How would you describe yourself in one sentence');
+    // Should include second-half question text
+    expect(msg).toContain('How would your most recent ex describe you');
+    // Should include answers
+    expect(msg).toContain('C1');
+    expect(msg).toContain('C6');
   });
 });
 

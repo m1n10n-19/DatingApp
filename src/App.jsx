@@ -11,17 +11,7 @@ import Settings from './components/Settings';
 import { createInitialPerson } from './services/questions';
 import { SAMPLE_PERSON_A, SAMPLE_PERSON_B } from './services/sampleData';
 import { saveProfile } from './services/profileStore';
-
-export const VIEWS = {
-  LANDING: 'landing',
-  LIBRARY: 'library',
-  TRUTH: 'truth',
-  QUESTIONNAIRE: 'questionnaire',
-  RELATIONSHIP_STATUS: 'relationship_status',
-  ANALYZING: 'analyzing',
-  RESULTS: 'results',
-  SETTINGS: 'settings',
-};
+import { VIEWS } from './views';
 
 export default function App() {
   const [view, setView] = useState(VIEWS.LANDING);
@@ -165,16 +155,17 @@ export default function App() {
     runAnalyze(personA, personB, status);
   };
 
-  const handleRequestRepair = async () => {
-    setRepairLoading(true);
-    setRepairError(null);
+  // Generic fetch helper for repair/simulate endpoints (Simplify #4)
+  const fetchPairEndpoint = async (endpoint, dataKey, setLoading, setErrorState, defaultErrorMsg) => {
+    setLoading(true);
+    setErrorState(null);
     try {
-      const response = await fetch('/api/repair', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          personA: personA,
-          personB: personB,
+          personA,
+          personB,
           compatibility: analysisData.compatibility,
           relationshipStatus,
           provider,
@@ -183,7 +174,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Repair generation failed. Please try again.';
+        let errorMessage = defaultErrorMsg;
         try {
           const errData = await response.json();
           errorMessage = errData.details || errData.error || errorMessage;
@@ -194,62 +185,25 @@ export default function App() {
       }
 
       const data = await response.json();
-      setAnalysisData((prev) => ({ ...prev, repair: data.repair }));
+      setAnalysisData((prev) => ({ ...prev, [dataKey]: data[dataKey] }));
     } catch (err) {
-      console.error('Repair error:', err);
+      console.error(`${dataKey} error:`, err);
       const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
-      setRepairError(
+      setErrorState(
         isNetworkError
           ? 'Unable to connect to the server. Please ensure the backend is running.'
           : err.message
       );
     } finally {
-      setRepairLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleRequestSimulate = async () => {
-    setSimulateLoading(true);
-    setSimulateError(null);
-    try {
-      const response = await fetch('/api/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          personA: personA,
-          personB: personB,
-          compatibility: analysisData.compatibility,
-          relationshipStatus,
-          provider,
-          model,
-        }),
-      });
+  const handleRequestRepair = () =>
+    fetchPairEndpoint('/api/repair', 'repair', setRepairLoading, setRepairError, 'Repair generation failed. Please try again.');
 
-      if (!response.ok) {
-        let errorMessage = 'Simulation failed. Please try again.';
-        try {
-          const errData = await response.json();
-          errorMessage = errData.details || errData.error || errorMessage;
-        } catch {
-          // Response body wasn't valid JSON
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      setAnalysisData((prev) => ({ ...prev, simulation: data.simulation }));
-    } catch (err) {
-      console.error('Simulate error:', err);
-      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
-      setSimulateError(
-        isNetworkError
-          ? 'Unable to connect to the server. Please ensure the backend is running.'
-          : err.message
-      );
-    } finally {
-      setSimulateLoading(false);
-    }
-  };
+  const handleRequestSimulate = () =>
+    fetchPairEndpoint('/api/simulate', 'simulation', setSimulateLoading, setSimulateError, 'Simulation failed. Please try again.');
 
   const handleReset = () => {
     setView(VIEWS.LANDING);
@@ -274,17 +228,6 @@ export default function App() {
 
   // Show model selector on all views except analyzing and settings
   const showModelSelector = view !== VIEWS.ANALYZING && view !== VIEWS.SETTINGS;
-
-  // Build results shape for Results component
-  const resultsData = analysisData
-    ? {
-        personA: analysisData.personA,
-        personB: analysisData.personB,
-        compatibility: analysisData.compatibility,
-        repair: analysisData.repair,
-        simulation: analysisData.simulation,
-      }
-    : null;
 
   return (
     <div className="min-h-screen">
@@ -332,6 +275,7 @@ export default function App() {
 
       {view === VIEWS.QUESTIONNAIRE && (
         <Questionnaire
+          key={`questionnaire-${questionnaireMode}-${freshFlowStage ?? 'none'}`}
           personLabel={freshFlowStage ? `Person ${freshFlowStage}` : 'Profile'}
           initialPerson={activeProfile}
           onComplete={handleQuestionnaireComplete}
@@ -352,7 +296,7 @@ export default function App() {
 
       {view === VIEWS.RESULTS && (
         <Results
-          results={resultsData}
+          results={analysisData}
           error={error}
           personA={personA || {}}
           personB={personB || {}}

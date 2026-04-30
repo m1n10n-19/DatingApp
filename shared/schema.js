@@ -35,8 +35,6 @@
  * @property {string} verdict - One of 'COMPLEMENT', 'COMBUSTION', 'MIRROR', 'MISFIRE'.
  * @property {number} score - 0-100 compatibility score.
  * @property {string} dynamic - How these two interact.
- * @property {string} magnetism - What draws them together.
- * @property {string} friction - Where they'll clash.
  * @property {string} shadowCollision - How their shadow patterns collide.
  * @property {string} breakingPoint - What could break them.
  * @property {string} repairLever - The key lever for repairing conflict.

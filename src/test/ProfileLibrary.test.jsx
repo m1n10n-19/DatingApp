@@ -21,7 +21,7 @@ vi.mock('../services/profileStore', () => {
   };
 });
 
-import { listProfiles, deleteProfile, __setStore } from '../services/profileStore';
+import { deleteProfile, __setStore } from '../services/profileStore';
 
 const makeProfile = (id, name) => ({
   id,
