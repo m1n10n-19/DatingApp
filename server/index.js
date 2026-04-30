@@ -157,6 +157,30 @@ app.get('/api/models', (_req, res) => {
   res.json(available);
 });
 
+// --- Endpoint: set an API key at runtime ---
+const VALID_ENV_KEYS = new Set(Object.values(MODEL_PROVIDERS).map((p) => p.envKey));
+
+app.post('/api/keys', (req, res) => {
+  const { key, value } = req.body;
+  if (!key || !value || typeof key !== 'string' || typeof value !== 'string') {
+    return res.status(400).json({ error: 'key and value are required strings' });
+  }
+  if (!VALID_ENV_KEYS.has(key)) {
+    return res.status(400).json({ error: `Unknown key: ${key}` });
+  }
+
+  // Set the env var and clear any cached client so it gets recreated with the new key
+  process.env[key] = value.trim();
+  for (const [id, provider] of Object.entries(MODEL_PROVIDERS)) {
+    if (provider.envKey === key) {
+      clients.delete(id);
+      break;
+    }
+  }
+
+  res.json({ ok: true });
+});
+
 // --- Input validation ---
 function validatePerson(person, label) {
   if (!person || typeof person !== 'object') {

@@ -4,11 +4,13 @@ import PersonForm from './components/PersonForm';
 import Analyzing from './components/Analyzing';
 import Results from './components/Results';
 import ModelSelector from './components/ModelSelector';
+import Settings from './components/Settings';
 import { QUESTIONS, createInitialPerson } from './services/questions';
 import { SAMPLE_PERSON_A, SAMPLE_PERSON_B } from './services/sampleData';
 
 const STEPS = {
   LANDING: 'landing',
+  SETTINGS: 'settings',
   PERSON_A: 'personA',
   PERSON_B: 'personB',
   ANALYZING: 'analyzing',
@@ -119,21 +121,29 @@ export default function App() {
     setError(null);
   };
 
-  // Show model selector on all steps except analyzing
-  const showModelSelector = step !== STEPS.ANALYZING;
+  // Show model selector on all steps except analyzing and settings
+  const showModelSelector = step !== STEPS.ANALYZING && step !== STEPS.SETTINGS;
 
   return (
     <div className="min-h-screen">
       {showModelSelector && (
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
           <ModelSelector
             selectedProvider={provider}
             selectedModel={model}
             onChange={handleModelChange}
           />
+          <button
+            onClick={() => setStep(STEPS.SETTINGS)}
+            className="p-2 rounded-full bg-surface/60 border border-surface-light/50 text-text-dim hover:text-text hover:border-surface-light transition-all cursor-pointer"
+            title="API Key Settings"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
         </div>
       )}
       {step === STEPS.LANDING && <Landing onStart={handleStart} onQuickTest={handleQuickTest} />}
+      {step === STEPS.SETTINGS && <Settings onBack={() => setStep(STEPS.LANDING)} />}
       {step === STEPS.PERSON_A && (
         <PersonForm
           label="Person A"
